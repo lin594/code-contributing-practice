@@ -29,6 +29,7 @@
 ### Commit 规范
 
 > 本节主要参考自 [`angular`](https://github.com/angular/angular/blob/main/CONTRIBUTING.md) 。
+> 更宽松地要求可以参见 [How to Write a Git Commit Message](https://cbea.ms/git-commit/) ，这里给出一些最基本的要求。 感谢 @derecknowayback 的分享。
 
 每一个 Git commit message 由 **header** 和 **body** 组成。
 
