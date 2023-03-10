@@ -20,7 +20,7 @@ jobs:
         assignees: ${{ github.event.comment.user.login }}
         labels: exercise1
     - name: Delete comment
-      uses: detomarco/delete-comment@v1
+      uses: detomarco/delete-comments@v1.0.4
       with:
         comment-id: ${{ github.event.comment.id }}
         token: ${{ secrets.GITHUB_TOKEN }}
