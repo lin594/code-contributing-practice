@@ -1,0 +1,42 @@
+name: Pull Request Checker
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - run: npm install
+      - run: |
+          npm install --save-dev @commitlint/config-angular @commitlint/cli
+          echo "module.exports = {extends: ['@commitlint/config-angular']};" > commitlint.config.js
+
+      # Run the commitlint action, considering its own dependencies and yours as well 🚀
+      # `github.workspace` is the path to your repository.
+      - uses: wagoid/commitlint-github-action@v5
+        env:
+          NODE_PATH: ${{ github.workspace }}/node_modules
+
+      # check if only one commit exists in the PR
+      - name: Check if only one commit exists in the PR
+        run: |
+          if [ $(git rev-list --count HEAD) -gt 1 ]; then
+            echo "More than one commit found in the PR. Please squash your commits."
+            exit 1
+          fi
+
+      # check if the PR close an issue in PR body
+      - name: Check if the PR close an issue in PR body
+        run: |
+          if ! grep -q "close #\d" ${{ github.event.pull_request.body }}; then
+            echo "No issue closed in the PR body. Please add a line like 'close #123' to the PR body."
+            exit 1
+          fi
