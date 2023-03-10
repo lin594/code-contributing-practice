@@ -7,7 +7,7 @@ jobs:
   new_issue:
   # create a new issue and assign it to who commented
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.number == 1 && (github.event.comment.body == '1' || github.event.comment.body == '认领' || github.event.comment.body == '我来' || github.event.comment.body == 'OK' || github.event.comment.body == 'test' || github.event.comment.body == 'Test'))}}
+    if: ${{ github.event.issue.number == 1 && ( github.event.comment.body == '1' || github.event.comment.body == '认领' || github.event.comment.body == '我来' || github.event.comment.body == 'OK' || github.event.comment.body == 'test' || github.event.comment.body == 'Test' ) }}
     steps:
     - uses: actions/checkout@v3
     - name: Create new issue
