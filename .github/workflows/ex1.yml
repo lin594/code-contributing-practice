@@ -15,8 +15,8 @@ jobs:
     - name: Create new issue
       uses: peter-evans/create-issue-from-file@v4
       with:
-        title: Excersice 1 for ${{ github.event.comment.user.login }}
-        content-filepath: .github/ISSUE_TEMPLATE/excersice1.md
+        title: Exercise 1 for ${{ github.event.comment.user.login }}
+        content-filepath: .github/ISSUE_TEMPLATE/exercise1.md
         assignees: ${{ github.event.comment.user.login }}
         labels: exercise1
     - name: Delete comment
