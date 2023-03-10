@@ -4,7 +4,7 @@ on:
   issue_comment:
     types: [created]
     issue_number: 1
-    comment: 'OK|test|认领|Test|我来'
+    comment: 'OK|test|认领|Test|我来|1'
 
 jobs:
   new_issue:
@@ -19,3 +19,8 @@ jobs:
         content-filepath: .github/ISSUE_TEMPLATE/excersice1.md
         assignees: ${{ github.event.comment.user.login }}
         labels: exercise1
+    - name: Delete comment
+      uses: detomarco/delete-comment@v1
+      with:
+        comment-id: ${{ github.event.comment.id }}
+        token: ${{ secrets.GITHUB_TOKEN }}
