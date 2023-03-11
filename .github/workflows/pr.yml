@@ -1,6 +1,6 @@
 name: Pull Request Checker
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
 
@@ -24,14 +24,6 @@ jobs:
       - uses: wagoid/commitlint-github-action@v5
         env:
           NODE_PATH: ${{ github.workspace }}/node_modules
-
-      # check if only one commit exists in the PR
-      - name: Check if only one commit exists in the PR
-        run: |
-          if [ $(git rev-list --count HEAD) -gt 1 ]; then
-            echo "More than one commit found in the PR. Please squash your commits."
-            exit 1
-          fi
 
       # check if the PR close an issue in PR body
       - name: Check if the PR close an issue in PR body
