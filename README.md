@@ -27,9 +27,9 @@
 
 注意事项：
 
-- 在 #1 中评论获取专属 issue
+- 在 [#1](https://github.com/FrogDar/code-contributing-practice/issues/1) 中评论获取专属 issue
 
-- 记得查看 `CONTRIBUTING.md` 里的规范（比如 git message 要使用 [`angular` 规范](https://github.com/angular/angular/blob/main/CONTRIBUTING.md)）
+- 记得查看 [`CONTRIBUTING.md`](https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md) 里的规范（比如 git message 要使用 [`angular` 规范](https://github.com/angular/angular/blob/main/CONTRIBUTING.md)）
 
 ### 练习二
 
@@ -37,7 +37,7 @@
 
 注意事项：
 
-- 在 #5 中评论获取专属 issue
+- 在 [#5](https://github.com/FrogDar/code-contributing-practice/issues/5) 中评论获取专属 issue
 - 务必保持此次提交不包括上次提交的 git message。
 
 ## TODO
