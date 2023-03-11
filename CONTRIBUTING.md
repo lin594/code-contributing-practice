@@ -2,7 +2,7 @@
 
 ### 认领 issue
 
-在本仓库没有太多可以认领的 ，直接在[默认 issue](https://github.com/FrogDar/code-contributing-practice/issues/1) 下评论即可。
+在练习的 issue 如[练习一](https://github.com/FrogDar/code-contributing-practice/issues/1) 下评论即可获得一个专属 issue。这个 issue 已经自动分配给你，请你完成它哦~
 
 ### 开始编码（TODO）
 
@@ -21,6 +21,8 @@
 > 同样，如果你遇到了困难，请向 mentor 求助。
 
 在你创建 Pull Request 后，你会看到 checks running ，请留意失败的 checks ，这通常意味着你提交的代码可能存在问题。
+
+在本仓库中主要是对规范性进行检查，如 git message 是否遵守规范？是否在 PR 中关闭对应的 issue 等。
 
 ### 等待 Code Review
 
