@@ -1,7 +1,11 @@
 name: Exercise
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
+
+permissions:
+  issues: write
+  contents: read
 
 jobs:
   exercise1:
