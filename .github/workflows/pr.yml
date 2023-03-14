@@ -28,7 +28,7 @@ jobs:
         env:
           NODE_PATH: ${{ github.workspace }}/node_modules
         with:
-          helpURL: https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md
+          helpURL: 'https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md'
 
       # check if the PR close an issue in PR body
       - name: Check if the PR close an issue in PR body
