@@ -1,1 +1,1 @@
-关注猫球喵,谢谢喵~
+He lived, he loved, he wrote.
