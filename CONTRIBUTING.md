@@ -2,8 +2,10 @@
 
 ### 认领 issue
 
-在练习的 issue 如[练习一](https://github.com/FrogDar/code-contributing-practice/issues/1) 下评论即可获得一个专属 issue。这个 issue 已经自动分配给你，请你完成它哦~
+创建一个 issue 命名为 `Ex1` 或 `ex1` 或 `练习1` 或 `练习一`，机器人会自动更新任务并将这个 issue 分配给你，请你完成它哦~ 
 
+后续的其他任务就把 `1` 换成 `2`、`3`等其他编号。
+ 
 ### 开始编码（TODO）
 
 在点击仓库右上角的 Fork 按钮将在你的账号中创建该仓库的副本。前往你的 GitHub 中的相同仓库，地址通常为 `https://github.com/你的用户名/code-contributing-practice` 接下来将在你自己账号的仓库中操作。
