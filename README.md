@@ -11,7 +11,7 @@
   - 创建或选定分支
   - 提交代码
 - 创建 Pull Request
-  - 在 PR 文字中加上 `close #123` （假定你要完成的 issue 编号是 123 的话）
+  - 在 PR 的说明文字中加上 `close #123` （假定你要完成的 issue 编号是 123 的话）
 
 - 等待代码审查
 
@@ -27,9 +27,9 @@
 
 注意事项：
 
-- 在 [#1](https://github.com/FrogDar/code-contributing-practice/issues/1) 中评论获取专属 issue
-
+- 创建一个 issue，标题命名为 `Ex1` 或 `ex1` 或 `练习1` 或 `练习一`，机器人会将它分配给你，成为你的专属练习 issue
 - 记得查看 [`CONTRIBUTING.md`](https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md) 里的规范（比如 git message 要使用 [`angular` 规范](https://github.com/angular/angular/blob/main/CONTRIBUTING.md)）
+- 建议自己创建一个分支，并在分支上修改后提交 PR，具体做法和理由见练习二。
 
 ### 练习二
 
@@ -37,7 +37,7 @@
 
 注意事项：
 
-- 在 [#5](https://github.com/FrogDar/code-contributing-practice/issues/5) 中评论获取专属 issue
+- 创建一个 issue，标题命名为 `Ex2` 或 `ex2` 或 `练习2` 或 `练习二`，机器人会将它分配给你，成为你的专属练习 issue
 - 务必保持此次提交不包括上次提交的 git message。
 
 ## TODO

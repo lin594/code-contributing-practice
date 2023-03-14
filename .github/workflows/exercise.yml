@@ -1,46 +1,82 @@
 name: Exercise
+# on issues created or updated
 on:
-  issue_comment:
-    types: [created, edited]
+  issues:
+    types:
+      - opened
+      - edited
 
 permissions:
   issues: write
   contents: read
 
 jobs:
-  exercise1:
-  # create a new issue and assign it to who commented
+  ex1:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.number == 1 && ( github.event.comment.body == '1' || github.event.comment.body == '认领' || github.event.comment.body == '我来' || github.event.comment.body == 'OK' || github.event.comment.body == 'test' || github.event.comment.body == 'Test' ) }}
+    # if issue title is ex1
+    if: ${{ github.event.issue.title == 'Ex1' || github.event.issue.title == 'ex1' || github.event.issue.title == '练习1' || github.event.issue.title == '练习一' }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Create new issue
-      uses: peter-evans/create-issue-from-file@v4
-      with:
-        title: Exercise 1 for ${{ github.event.comment.user.login }}
-        content-filepath: .github/ISSUE_TEMPLATE/exercise1.md
-        assignees: ${{ github.event.comment.user.login }}
-        labels: exercise1
-    - name: Delete comment
-      uses: detomarco/delete-comments@v1.0.4
-      with:
-        comment-id: ${{ github.event.comment.id }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-  
-  exercise2:
+      - uses: actions/checkout@v3
+      - name: Comment on issue
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body-file: .github/ISSUE_TEMPLATE/exercise1.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add label
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['exercise1']
+            })
+      - name: Assign issue
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.addAssignees({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              assignees: ['${{ github.event.issue.user.login }}']
+            })
+
+  ex2:
     runs-on: ubuntu-latest
-    if: ${{ github.event.issue.number == 5 && ( github.event.comment.body == '1' || github.event.comment.body == '认领' || github.event.comment.body == '我来' || github.event.comment.body == 'OK' || github.event.comment.body == 'test' || github.event.comment.body == 'Test' ) }}
+    # if issue title is ex2
+    if: ${{ github.event.issue.title == 'Ex2' || github.event.issue.title == 'ex2' || github.event.issue.title == '练习2' || github.event.issue.title == '练习二' }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Create new issue
-      uses: peter-evans/create-issue-from-file@v4
-      with:
-        title: Exercise 2 for ${{ github.event.comment.user.login }}
-        content-filepath: .github/ISSUE_TEMPLATE/exercise2.md
-        assignees: ${{ github.event.comment.user.login }}
-        labels: exercise2
-    - name: Delete comment
-      uses: detomarco/delete-comments@v1.0.4
-      with:
-        comment-id: ${{ github.event.comment.id }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
+      - name: Comment on issue
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body-file: .github/ISSUE_TEMPLATE/exercise1.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add label
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['exercise2']
+            })
+      - name: Assign issue
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.addAssignees({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              assignees: ['${{ github.event.issue.user.login }}']
+            })

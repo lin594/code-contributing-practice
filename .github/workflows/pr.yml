@@ -4,6 +4,9 @@ on:
     branches:
       - main
 
+permissions:
+  pull-requests: read
+
 jobs:
   commitlint:
     runs-on: ubuntu-latest
@@ -27,10 +30,11 @@ jobs:
         with:
           helpURL: https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md
 
-#       # check if the PR close an issue in PR body
-#       - name: Check if the PR close an issue in PR body
-#         run: |
-#           if ! echo "${{ github.event.pull_request.body }}" | grep -q "close" ; then
-#             echo "No issue closed in the PR body. Please add a line like 'close #123' to the PR body."
-#             exit 1
-#           fi
+      # check if the PR close an issue in PR body
+      - name: Check if the PR close an issue in PR body
+        run: |
+          if ! echo "${{ github.event.pull_request.body }}" | grep -q "close" ; then
+            echo "No issue closed in the PR body. Please add a line like 'close #123' to the PR body."
+            exit 1
+          fi
+
