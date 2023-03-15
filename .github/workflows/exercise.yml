@@ -40,7 +40,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
-          body-file: .github/ISSUE_TEMPLATE/exercise1.md
+          body-file: .github/ISSUE_TEMPLATE/exercise2.md
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Add label
         uses: andymckay/labeler@master
