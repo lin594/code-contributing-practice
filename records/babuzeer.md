@@ -130,7 +130,7 @@ PtrNode checkout(int start,PtrNode head2)
         return NULL;
     return NULL;
 }
-int countremain(PtrNode head2)//记录剩余人数
+int countremain(PtrNode head2)
 {
     int num=1;
     PtrNode temp=head2->next;
