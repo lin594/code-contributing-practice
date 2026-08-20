@@ -32,7 +32,7 @@ jobs:
       pr_number: ${{ steps.grade.outputs.pr_number }}
     steps:
       - name: Check out trusted default branch only
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -62,7 +62,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out trusted default branch only
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
