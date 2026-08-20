@@ -1,0 +1,31 @@
+name: "Exercise 4 · 解决上游冲突"
+description: 处理机器人在专属上游分支制造的真实冲突
+title: "[Exercise 4] "
+labels:
+  - exercise:4
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 3。PR 创建后，机器人会更新上游同一行以制造真实冲突。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 3。
+          required: true
+        - label: 我会在本地 fetch 上游，并使用 merge 或 rebase 解决冲突。
+          required: true
+        - label: 我不会直接删除其中一方的内容来绕过冲突。
+          required: true
+  - type: dropdown
+    id: strategy
+    attributes:
+      label: 计划使用的方式
+      options:
+        - merge（更适合第一次练习）
+        - rebase
+        - 还不确定，等机器人提示
+    validations:
+      required: true

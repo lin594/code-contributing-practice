@@ -1,0 +1,14 @@
+{
+  "name": "code-contributing-practice",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/practice/*.test.mjs",
+    "check:source": "node scripts/practice/check-source.mjs",
+    "check": "npm run test && npm run check:source"
+  }
+}

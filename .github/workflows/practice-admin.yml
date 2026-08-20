@@ -1,0 +1,53 @@
+name: Practice / Administration
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Administrative operation
+        required: true
+        type: choice
+        options:
+          - bootstrap-labels
+          - close-legacy-sessions
+      confirmation:
+        description: Type CLOSE_LEGACY only when closing old sessions
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: practice-administration
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Practice / Administrative operation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted default branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
+      - name: Create or update managed labels
+        if: inputs.operation == 'bootstrap-labels'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/practice/workflow.mjs bootstrap
+
+      - name: Close legacy exercise sessions
+        if: inputs.operation == 'close-legacy-sessions'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CONFIRM: ${{ inputs.confirmation }}
+        run: node scripts/practice/workflow.mjs migrate-legacy
