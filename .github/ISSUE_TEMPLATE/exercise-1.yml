@@ -1,0 +1,27 @@
+name: "Exercise 1 · 第一次贡献"
+description: 练习 Fork、topic branch、commit、push 和第一次 Pull Request
+title: "[Exercise 1] "
+labels:
+  - exercise:1
+body:
+  - type: markdown
+    attributes:
+      value: |
+        创建后，机器人会分配一个不会写入 `main` 的专属训练分支，并回复下一步命令。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我会使用自己的 Fork 和独立 topic branch，不直接在 main/master 上练习。
+          required: true
+        - label: 我知道连续 14 天无活动时，临时训练分支会被自动清理。
+          required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: 你希望通过本关熟悉什么？
+      description: 简短写一句即可，不影响自动判定。
+      placeholder: 例如：我想完整走一次 Fork 到 PR 的流程。
+    validations:
+      required: true

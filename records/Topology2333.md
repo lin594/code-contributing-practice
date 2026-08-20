@@ -1,4 +1,0 @@
-# CEREATED ON 03/17/2023
-## CHINESE REFUSED
-
-不知道要写什么了，，大青蛙最棒

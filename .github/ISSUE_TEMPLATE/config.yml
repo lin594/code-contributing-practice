@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub 官方 Git 教程
+    url: https://docs.github.com/zh/get-started/using-git/about-git
+    about: 遇到一般 Git 概念问题时，可以先查阅官方教程。

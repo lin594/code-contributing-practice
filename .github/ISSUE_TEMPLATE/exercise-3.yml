@@ -1,0 +1,28 @@
+name: "Exercise 3 · 响应 Code Review"
+description: 在同一个 PR 中接收反馈、修改并继续 push
+title: "[Exercise 3] "
+labels:
+  - exercise:3
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 2。机器人会在第一次 PR 检查时提出一次必须处理的反馈。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 2。
+          required: true
+        - label: 收到反馈后，我会继续更新原 PR，而不是新建 PR。
+          required: true
+        - label: 我会在修改后留言说明如何处理反馈。
+          required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: 你认为收到 Review 后应该怎么做？
+      placeholder: 用自己的话简单描述。
+    validations:
+      required: true

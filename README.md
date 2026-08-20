@@ -1,90 +1,57 @@
-# code-contributing-practice
+# Git / GitHub 开源贡献练习场
 
-> 欢迎来到开源贡献练习场！本仓库旨在帮助你熟悉并掌握向开源项目贡献代码的标准流程，包括 fork、git branch、pull request (PR) 等核心操作。
+这是一个面向 Git 和 GitHub 初学者的自动化练习仓库。你会使用真实的 Fork、Issue、branch、commit、Pull Request、Review 和冲突解决流程；机器人会在 PR 中指出具体问题、给出修复命令，并在通过后自动完成练习。
 
-## 为仓库贡献代码应当怎么做？
+## 为什么练习不会弄乱 main
 
-### 1. 准备工作
+每个练习 Issue 都会获得一个专属的临时上游分支：
 
-- **阅读贡献指南**：在项目根目录找到并阅读 `CONTRIBUTING.md` 文件，了解代码规范。
-- **认领 Issue**：找到或创建一个 `Issue`，评论表示你希望处理它，并等待分配。
+```text
+practice/ex<关卡>/issue-<Issue 编号>-<GitHub 用户名>
+```
 
-### 2. 本地开发
+练习 PR 合入这个临时分支，而不是 `main`。通过后机器人会 squash merge、关闭 Issue 并删除临时分支。因此主干只保存课程与自动化代码，普通 clone 不会下载其他人的练习产物。
 
-1.  **Fork 仓库**：点击原始仓库右上角的 `Fork` 按钮，复制一份到你的 GitHub 账号下。
+## 四关学习路线
 
-2.  **Clone 到本地**：
-    ```bash
-    # 将 YOUR_USERNAME 替换为你的 GitHub 用户名
-    git clone [https://github.com/YOUR_USERNAME/code-contributing-practice.git](https://github.com/YOUR_USERNAME/code-contributing-practice.git)
-    cd code-contributing-practice
-    ```
+| 关卡 | 目标 | 必须完成 |
+| --- | --- | --- |
+| Exercise 1 | 第一次贡献 | Fork、topic branch、一条提交、关联 Issue、创建 PR |
+| Exercise 2 | 干净历史 | 新分支、恰好两条提交、无线性历史污染 |
+| Exercise 3 | 响应 Review | 在原 PR 中继续 commit 和 push，落实反馈 |
+| Exercise 4 | 解决冲突 | fetch 上游，使用 merge 或 rebase 解决真实冲突 |
 
-3.  **创建特性分支**：**不要在 `main` 分支上直接修改。**
-    ```bash
-    # 分支名应清晰并与任务相关，例如：fix/issue-123
-    git checkout -b feature/my-first-contribution
-    ```
-    
-4.  **(可选) 同步上游仓库**：在开始修改前，获取原始仓库的最新代码以避免冲突。
-    ```bash
-    git remote add upstream [https://github.com/FrogDar/code-contributing-practice.git](https://github.com/FrogDar/code-contributing-practice.git)
-    git fetch upstream
-    git checkout main
-    git merge upstream/main
-    git checkout feature/my-first-contribution
-    git rebase main # 将你的分支变基到最新的 main 分支上
-    ```
+从仓库的 [New issue](https://github.com/lin594/code-contributing-practice/issues/new/choose) 页面选择 Exercise 1 开始。后续关卡必须按顺序完成。
 
-5.  **修改与提交**：完成代码修改后，按照规范提交。
-    ```bash
-    git add .
-    git commit -m "feat(records): add practice file for YOUR_NAME"
-    ```
+## 开始前
 
-6.  **推送至你的 Fork 仓库**：
-    ```bash
-    git push origin feature/my-first-contribution
-    ```
+你需要：
 
-### 3. 创建 Pull Request (PR)
+- 一个 GitHub 账号；
+- Git 2.23 或更高版本；
+- 能够使用终端执行基础命令；
+- 一个从本仓库创建的 Fork。
 
--  **发起 PR**：在你的 Fork 仓库页面，点击 `Compare & pull request` 按钮。
--  **填写描述**：
-    - **标题**：清晰概括你的修改。
-    - **关联 Issue**：在描述中写入 `close #123` （`123` 为对应的 Issue 编号），PR 合并后会自动关闭该 Issue。
+第一次使用请完整阅读[开始指南](docs/getting-started.md)。四关的任务和验收规则见[练习说明](docs/exercises.md)。
 
-### 4. 代码审查
+## 自动反馈怎么看
 
-- **等待审查**：维护者会对你的代码进行审查并提出修改意见。
-- **更新代码**：若有修改，直接在本地的同一分支上继续 `commit` 和 `push`，PR会自动同步更新。
-- **合并**：PR 被批准并合并后，你就完成了一次贡献！
-## 练习
+机器人会在 PR 中维护一条 `🤖 自动反馈` 评论：
 
-> 在练习中提交的内容没有限制，可以是在 `records` 文件夹下提交一个属于自己的 `.md` 文件，也可以是完善本仓库。
->
-> 需要注意的是，练习失败的那些产物对于新手来说只能是删掉再来一次。当然你也可以通过提升自己的 git 水平，用一些奇淫巧技拯救此前错误的练习结果。
+- **必须修复**：练习目标没有完成，检查会显示红灯，并给出准确修改方法；
+- **改进建议**：以 Warning 显示，不阻止练习完成；
+- **下一步**：告诉你应该继续 push、解决冲突还是等待自动合并。
 
-### 练习一：完成第一次贡献
+Commit message 推荐使用 `type: summary` 或 `type(scope): summary`，例如 `docs: add my practice notes`。PR 标题也推荐采用同样风格。格式不规范只会收到 Warning，不会单独导致练习失败。
 
-- **目标**：完整体验一次标准的 Fork & PR 流程。
-- **步骤**：
-    1. 创建一个 Issue，标题为 `Ex1` 或 `练习一`，机器人会自动分配给你。
-    2. 严格遵循上述标准流程。
-    3. 遵守 [`CONTRIBUTING.md`](https://github.com/FrogDar/code-contributing-practice/blob/main/CONTRIBUTING.md) 中的规范（比如 git message 要使用[`angular` 规范](https://github.com/angular/angular/blob/main/CONTRIBUTING.md)）。
+## 需要帮助
 
-### 练习二：处理多个提交
+- 常见报错和恢复命令：[故障排查](docs/troubleshooting.md)
+- 常用 Git 命令：[Git 速查表](docs/git-cheatsheet.md)
+- 改进课程或自动化：[贡献指南](CONTRIBUTING.md)
 
-- **目标**：学习在同一 PR 中进行多次提交，并保持提交历史的干净。
-- **步骤**：
-    1. 创建一个 Issue，标题为 `Ex2` 或 `练习二`。
-    2. **务必为本次练习创建一条新分支**。
-    3. 确保本次 PR 不包含上一次练习的提交记录。
+完成四关后，可以寻找带有 `good first issue`、`documentation` 或 `help wanted` 标签的真实开源仓库进行实战。先阅读目标仓库自己的贡献指南，并以它的规则为准。
 
-## TODO
+## 给维护者
 
-- [x] 基本文字介绍
-- [x] 完成第一个贡献流程
-- [x] 完成一次手动评判
-- [x] 利用 `GitHub Actions` 自动评判流程并给予提示
-- [ ] 更为充实的文字介绍
+部署标签、仓库权限、分支保护、旧会话迁移和测试账号验收步骤见[维护者手册](docs/maintainers.md)。在完成初始化前，不要对外开放新的 Exercise Issue Forms。

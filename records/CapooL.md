@@ -1,1 +1,0 @@
-He lived, he loved, he wrote.

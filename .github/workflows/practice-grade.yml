@@ -1,0 +1,79 @@
+name: Practice / Grade
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions: {}
+
+concurrency:
+  group: practice-grade-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  grade:
+    name: Practice / Grade
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      eligible: ${{ steps.grade.outputs.eligible }}
+      outcome: ${{ steps.grade.outputs.outcome }}
+      head_sha: ${{ steps.grade.outputs.head_sha }}
+      pr_number: ${{ steps.grade.outputs.pr_number }}
+    steps:
+      - name: Check out trusted default branch only
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
+      - name: Grade metadata and files as inert data
+        id: grade
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/practice/workflow.mjs grade-pr
+
+      - name: Fail required practice checks
+        if: steps.grade.outputs.outcome == 'fail'
+        run: exit 1
+
+  merge:
+    name: Practice / Automatic squash merge
+    needs: grade
+    if: needs.grade.outputs.eligible == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out trusted default branch only
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+
+      - name: Revalidate exact head and merge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.grade.outputs.pr_number }}
+          EXPECTED_HEAD: ${{ needs.grade.outputs.head_sha }}
+        run: node scripts/practice/workflow.mjs merge-pr
