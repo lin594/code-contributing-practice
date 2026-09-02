@@ -6,12 +6,13 @@
 
 练习 PR 必须从 Exercise Issue Form 开始。机器人会创建专属 `practice/ex...` base 分支并给出命令；不要把练习直接提交到 `main`。
 
-练习的硬性规则由每关目标决定，例如提交数量、是否复用原 PR、修改范围和冲突是否解决。以下项目属于推荐项，不会因为格式问题单独阻断练习：
+练习的硬性规则由每关目标决定，例如提交数量、是否复用原 PR、修改范围和冲突是否解决。协作规范采用渐进式要求：第 1–2 关先作为 Warning，第 3 关学习后成为后续关卡的硬性规则。
 
 - Commit message 推荐 `type: summary` 或 `type(scope): summary`；
-- PR 标题推荐使用简洁、动作明确的同类格式；
-- 分支名推荐 `exercise/<关卡>-<Issue 编号>`；
-- 收到 Review 后，建议留言说明自己如何处理了反馈。
+- PR 标题使用简洁、动作明确的同类格式；
+- 分支名使用 `exercise/<关卡>-<Issue 编号>` 等清楚前缀；
+- PR 正文关联正确 Issue，并说明改动与验证方式；
+- 第 5/8 关收到 Review 后，留言说明处理内容和验证结果。
 
 常用提交类型包括 `docs`、`feat`、`fix`、`test`、`refactor`、`build`、`ci`、`chore` 和 `revert`。示例：
 
@@ -20,7 +21,7 @@ docs: complete exercise 1
 fix(ci): explain an invalid issue reference
 ```
 
-不符合推荐格式、使用 `WIP`/`fixup!`/`squash!` 或标题过于模糊时，机器人会给出 Warning 和修改示例，但仍会继续判断本关的真正目标。
+Commit message 不符合推荐格式、使用 `WIP`/`fixup!`/`squash!` 时只产生 Warning。第 3 关起，模糊 PR 标题、无意义 branch 或缺少正确 `Closes #...` 会阻断，因为这些正是已经学习过的协作目标。
 
 ## 改进训练仓库
 

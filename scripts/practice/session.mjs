@@ -1,14 +1,39 @@
 import {
+  EXERCISE_COUNT,
   EXERCISE_LABELS,
+  EXERCISE_LESSONS,
+  EXERCISE_TITLES,
   SCHEMA_VERSION,
   SESSION_BRANCH,
   SESSION_FILE,
   WORKSPACE_FILE,
 } from "./constants.mjs";
 
+const UPSTREAM_MUTATIONS = new Map([
+  [6, {
+    before: "课程公告：等待同步",
+    after: "课程公告：上游已更新",
+    message: "chore(practice): publish upstream course update",
+  }],
+  [7, {
+    before: "最终内容：待填写",
+    after: "最终内容：上游更新",
+    message: "chore(practice): inject upstream conflict",
+  }],
+  [8, {
+    before: "协作约定：等待维护者补充",
+    after: "协作约定：提交前先同步上游并回应 Review",
+    message: "chore(practice): add maintainer collaboration note",
+  }],
+]);
+
+export function upstreamMutation(exercise) {
+  return UPSTREAM_MUTATIONS.get(exercise) ?? null;
+}
+
 export function branchNameFor({ exercise, issueNumber, actor }) {
-  if (!Number.isInteger(exercise) || exercise < 1 || exercise > 4) {
-    throw new Error("exercise must be an integer from 1 to 4");
+  if (!Number.isInteger(exercise) || exercise < 1 || exercise > EXERCISE_COUNT) {
+    throw new Error(`exercise must be an integer from 1 to ${EXERCISE_COUNT}`);
   }
   if (!Number.isInteger(issueNumber) || issueNumber < 1) {
     throw new Error("issueNumber must be a positive integer");
@@ -46,7 +71,7 @@ export function validateManifest(manifest) {
   try {
     return (
       manifest.baseBranch === branchNameFor(manifest) &&
-      ["active", "review-requested", "conflict-injected", "completed"].includes(manifest.state)
+      ["active", "review-requested", "upstream-injected", "completed"].includes(manifest.state)
     );
   } catch {
     return false;
@@ -60,7 +85,7 @@ export function workspaceTemplate(exercise) {
 - GitHub 用户名：TODO
 - 我希望参与的开源方向：TODO
 
-请把两处 \`TODO\` 替换成你自己的内容。
+请填写上面的用户名和开源方向。
 `,
     2: `# 干净的提交历史
 
@@ -72,7 +97,27 @@ TODO：请在第一个 commit 中填写。
 
 TODO：请在第二个 commit 中填写。
 `,
-    3: `# 响应 Code Review
+    3: `# 清晰地发起协作
+
+## 变更目的
+
+TODO：用一两句话说明为什么值得做这次修改。
+
+## 验证方式
+
+TODO：说明评审者如何确认你的修改正确。
+`,
+    4: `# Draft Pull Request
+
+状态：可以评审
+
+## 完成标准
+
+TODO：写出你认为评审者判断本次修改完成所需的一条标准。
+
+第一次创建 PR 时请选择 Draft。检查运行后，再点击 Ready for review。
+`,
+    5: `# 响应 Code Review
 
 状态：初稿
 
@@ -80,13 +125,49 @@ TODO：请在第二个 commit 中填写。
 
 TODO：先写下你的初稿并创建 PR。机器人会在 PR 中提出修改要求。
 `,
-    4: `# 解决上游冲突
+    6: `# 同步上游更新
+
+## 课程公告
+
+课程公告：等待同步
+
+这里保留足够的上下文间隔，让上游公告和你的笔记可以自动合并。
+
+请先阅读本关教程，再完成下面的个人笔记。
+
+## 我的同步笔记
+
+个人笔记：TODO
+`,
+    7: `# 解决上游冲突
 
 ## 最终决定
 
 最终内容：待填写
 
 创建 PR 前，请把“待填写”改成“我的修改”。机器人随后会更新上游的同一行。
+`,
+    8: `# 协作综合练习
+
+状态：初稿
+
+## 变更目的
+
+TODO：说明这次改动为谁解决什么问题。
+
+## 协作约定
+
+协作约定：等待维护者补充
+
+这部分模拟协作期间由上游维护者补充的项目约定。
+
+同步时请观察 Git 如何把它与较远位置的个人修改自动整合。
+
+以上内容由维护者在你创建 PR 后更新。请同步上游，不要手工猜测新内容。
+
+## 自测结果
+
+TODO：写出你检查过的内容。
 `,
   };
   if (!templates[exercise]) throw new Error("unknown exercise");
@@ -103,9 +184,13 @@ export function sessionFiles(manifest) {
 export function issueInstructions({ manifest, repositoryUrl }) {
   const branch = manifest.baseBranch;
   const head = `exercise/${manifest.exercise}-${manifest.issueNumber}`;
+  const title = EXERCISE_TITLES.get(manifest.exercise);
+  const lesson = EXERCISE_LESSONS.get(manifest.exercise);
   const compareUrl = `${repositoryUrl}/compare/${encodeURIComponent(branch)}...${encodeURIComponent(`${manifest.actor}:${head}`)}?expand=1&template=exercise.md`;
   return `<!-- practice-session:v1 -->
-## 练习 ${manifest.exercise} 已准备好
+## 练习 ${manifest.exercise}：${title} 已准备好
+
+先阅读[本关教程](${repositoryUrl}/blob/main/${lesson})，再执行下面的命令。教程会解释每条命令的作用和预期输出。
 
 你的专属上游分支是 \`${branch}\`。请在本地执行：
 
@@ -137,5 +222,6 @@ export function shouldHandleIssueEvent(event) {
 }
 
 export function shouldSkipGradeEvent(event) {
+  if (event?.issue && (!event.issue.pull_request || event.issue.state !== "open")) return true;
   return ["labeled", "unlabeled"].includes(event?.action) && event.label?.name?.startsWith("session:");
 }

@@ -10,11 +10,15 @@ on:
       - ready_for_review
       - labeled
       - unlabeled
+  issue_comment:
+    types:
+      - created
+      - edited
 
 permissions: {}
 
 concurrency:
-  group: practice-grade-${{ github.event.pull_request.number }}
+  group: practice-grade-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 jobs:

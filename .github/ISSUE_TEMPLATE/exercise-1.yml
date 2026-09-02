@@ -1,5 +1,5 @@
-name: "Exercise 1 · 第一次贡献"
-description: 练习 Fork、topic branch、commit、push 和第一次 Pull Request
+name: "Exercise 1 · 第一次 Pull Request"
+description: 走通 Fork、branch、commit、push 和第一次 PR
 title: "[Exercise 1] "
 labels:
   - exercise:1
@@ -7,21 +7,23 @@ body:
   - type: markdown
     attributes:
       value: |
-        创建后，机器人会分配一个不会写入 `main` 的专属训练分支，并回复下一步命令。
+        先完成[准备篇](https://github.com/lin594/code-contributing-practice/blob/main/docs/getting-started.md)并阅读[第 1 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/01-first-pull-request.md)。创建后，机器人会提供隔离的训练分支和准确命令。
   - type: checkboxes
     id: preparation
     attributes:
       label: 开始前确认
       options:
-        - label: 我会使用自己的 Fork 和独立 topic branch，不直接在 main/master 上练习。
+        - label: 我已 Fork、clone，并确认 origin 指向自己的 Fork、upstream 指向课程原仓库。
           required: true
-        - label: 我知道连续 14 天无活动时，临时训练分支会被自动清理。
+        - label: 我会使用机器人提供的 topic branch，不直接在 main/master 上练习。
+          required: true
+        - label: 我知道红灯应在原 PR 中修复，不会通过新建多个 PR 碰运气。
           required: true
   - type: textarea
     id: goal
     attributes:
-      label: 你希望通过本关熟悉什么？
-      description: 简短写一句即可，不影响自动判定。
-      placeholder: 例如：我想完整走一次 Fork 到 PR 的流程。
+      label: 本关目标
+      description: 用自己的话写出希望走通的流程，不影响自动判定。
+      placeholder: 例如：我想知道本地 commit 如何通过 PR 到达上游。
     validations:
       required: true

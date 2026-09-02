@@ -1,5 +1,5 @@
-name: "Exercise 4 · 解决上游冲突"
-description: 处理机器人在专属上游分支制造的真实冲突
+name: "Exercise 4 · Draft Pull Request"
+description: 先分享草稿，作者自查后再正式请求评审
 title: "[Exercise 4] "
 labels:
   - exercise:4
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        本关要求先完成 Exercise 3。PR 创建后，机器人会更新上游同一行以制造真实冲突。
+        本关要求先完成 Exercise 3。第一次红灯是课程的一部分：机器人要先看到 Draft，再看到 Ready for review。开始前阅读[第 4 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/04-draft-pull-request.md)。
   - type: checkboxes
     id: preparation
     attributes:
@@ -15,17 +15,14 @@ body:
       options:
         - label: 我已经完成 Exercise 3。
           required: true
-        - label: 我会在本地 fetch 上游，并使用 merge 或 rebase 解决冲突。
+        - label: 我会选择 Create draft pull request，而不是直接创建普通 PR。
           required: true
-        - label: 我不会直接删除其中一方的内容来绕过冲突。
+        - label: 我会检查 Conversation、Commits、Files changed 和 Checks 后再点击 Ready for review。
           required: true
-  - type: dropdown
-    id: strategy
+  - type: textarea
+    id: readiness
     attributes:
-      label: 计划使用的方式
-      options:
-        - merge（更适合第一次练习）
-        - rebase
-        - 还不确定，等机器人提示
+      label: 什么叫“可以评审”？
+      placeholder: 写出至少一条你会检查的完成标准。
     validations:
       required: true

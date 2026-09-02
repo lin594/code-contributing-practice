@@ -1,5 +1,5 @@
-name: "Exercise 2 · 干净的提交历史"
-description: 在一个 PR 中完成两条清晰、线性的提交
+name: "Exercise 2 · 暂存区与原子提交"
+description: 按顺序完成两件事，形成两条清晰的线性 commit
 title: "[Exercise 2] "
 labels:
   - exercise:2
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        本关要求先完成 Exercise 1。机器人会检查本关恰好有两条提交且没有 merge commit。
+        本关要求先完成 Exercise 1。开始前阅读[第 2 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/02-atomic-commits.md)。
   - type: checkboxes
     id: preparation
     attributes:
@@ -15,14 +15,15 @@ body:
       options:
         - label: 我已经完成 Exercise 1。
           required: true
-        - label: 我会从机器人提供的新 base 创建新分支，不复用上一关分支。
+        - label: 我会从新的机器人 base 创建分支，不复用上一关分支。
           required: true
-        - label: 我知道 commit message 不规范只会收到 Warning，不会阻断练习。
+        - label: 我会先完成并提交第一部分，再编辑和提交第二部分。
           required: true
   - type: textarea
-    id: question
+    id: prediction
     attributes:
-      label: 当前对提交历史的疑问
-      placeholder: 没有疑问时可以写“暂无”。
+      label: 执行前预测
+      description: 如果一次填完两个 TODO 并一次 git add，为什么难以得到两条原子 commit？
+      placeholder: 用一两句话回答。
     validations:
       required: true

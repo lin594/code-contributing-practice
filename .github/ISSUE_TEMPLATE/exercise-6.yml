@@ -1,0 +1,31 @@
+name: "Exercise 6 · 同步上游更新"
+description: fetch 后使用 merge 或 rebase 纳入无冲突更新
+title: "[Exercise 6] "
+labels:
+  - exercise:6
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 5。PR 创建后机器人会更新上游；不要手工伪造公告。开始前阅读[第 6 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/06-sync-upstream.md)。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 5。
+          required: true
+        - label: 我知道 fetch 只获取数据，仍需 merge 或 rebase。
+          required: true
+        - label: 我会等机器人注入更新后，再复制反馈中的准确 base 分支。
+          required: true
+  - type: dropdown
+    id: strategy
+    attributes:
+      label: 本次同步方式
+      options:
+        - merge（推荐第一次使用）
+        - rebase（会使用 --force-with-lease）
+        - 还不确定，先读机器人反馈
+    validations:
+      required: true

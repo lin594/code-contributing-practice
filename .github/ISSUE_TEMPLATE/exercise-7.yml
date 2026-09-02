@@ -1,0 +1,31 @@
+name: "Exercise 7 · 解决合并冲突"
+description: 处理机器人在上游同一行制造的真实冲突
+title: "[Exercise 7] "
+labels:
+  - exercise:7
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 6。冲突是内容决策，不是只删除标记。开始前阅读[第 7 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/07-conflicts.md)。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 6。
+          required: true
+        - label: 我会先读双方内容，再写出同时保留双方意图的结果。
+          required: true
+        - label: 卡住时我会使用 merge --abort 或 rebase --abort，而不是 reset --hard。
+          required: true
+  - type: dropdown
+    id: strategy
+    attributes:
+      label: 计划使用的方式
+      options:
+        - merge（推荐第一次使用）
+        - rebase
+        - 还不确定，等机器人提示
+    validations:
+      required: true

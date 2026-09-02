@@ -8,10 +8,10 @@ export function assertMergeEligible({ report, input, expectedHead }) {
   return true;
 }
 
-export function canInjectConflict({ pr, manifest, referencedIssues }) {
+export function canInjectUpstream({ pr, manifest, referencedIssues }) {
   return (
-    manifest?.exercise === 4 &&
-    !manifest.conflictBaseSha &&
+    [6, 7, 8].includes(manifest?.exercise) &&
+    !manifest.upstreamBaseSha &&
     pr?.base?.ref === manifest.baseBranch &&
     pr?.user?.login?.toLowerCase() === manifest.actor?.toLowerCase() &&
     referencedIssues.includes(manifest.issueNumber)

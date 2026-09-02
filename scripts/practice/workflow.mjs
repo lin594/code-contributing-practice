@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import {
+  COMPLETION_MARKER,
   EXERCISE_LABELS,
   FEEDBACK_MARKER,
+  SCHEMA_VERSION,
   SESSION_FILE,
   SESSION_MARKER,
   WORKSPACE_FILE,
@@ -10,7 +12,7 @@ import {
 import { parseFeedbackState, renderFeedback } from "./feedback.mjs";
 import { closingIssueNumbers, gradePractice, maintenanceReport } from "./grade.mjs";
 import { GitHubApiError, GitHubClient } from "./github.mjs";
-import { assertMergeEligible, canInjectConflict, expiryDecision, hasBlockingReview } from "./lifecycle.mjs";
+import { assertMergeEligible, canInjectUpstream, expiryDecision, hasBlockingReview } from "./lifecycle.mjs";
 import {
   createManifest,
   exerciseFromLabels,
@@ -19,6 +21,7 @@ import {
   sessionFiles,
   shouldHandleIssueEvent,
   shouldSkipGradeEvent,
+  upstreamMutation,
 } from "./session.mjs";
 
 function loadEvent() {
@@ -78,20 +81,25 @@ async function replaceSessionState(client, manifest, changes) {
   return updated;
 }
 
-async function injectConflict(client, manifest) {
-  if (manifest.exercise !== 4 || manifest.conflictBaseSha) return manifest;
+async function injectUpstream(client, manifest) {
+  const mutation = upstreamMutation(manifest.exercise);
+  if (!mutation || manifest.upstreamBaseSha) return manifest;
   const current = await client.getContent(WORKSPACE_FILE, manifest.baseBranch);
-  if (!current.includes("最终内容：待填写")) throw new Error("Exercise 4 base workspace is not in the expected initial state");
-  const changed = current.replace("最终内容：待填写", "最终内容：上游更新");
-  const conflictCommit = await client.commitFiles(manifest.baseBranch, { [WORKSPACE_FILE]: changed }, "chore(practice): inject upstream conflict");
-  return replaceSessionState(client, manifest, { state: "conflict-injected", conflictBaseSha: conflictCommit.sha });
+  if (!current.includes(mutation.before)) throw new Error(`Exercise ${manifest.exercise} base workspace is not in the expected initial state`);
+  const changed = current.replace(mutation.before, mutation.after);
+  const upstreamCommit = await client.commitFiles(manifest.baseBranch, { [WORKSPACE_FILE]: changed }, mutation.message);
+  return replaceSessionState(client, manifest, { state: "upstream-injected", upstreamBaseSha: upstreamCommit.sha });
 }
 
 async function prerequisiteComplete(client, actor, exercise) {
   if (exercise === 1) return true;
   const labelQuery = encodeURIComponent(`${EXERCISE_LABELS.get(exercise - 1)},session:completed`);
   const issues = await client.paginate(client.repoPath(`/issues?state=closed&creator=${encodeURIComponent(actor)}&labels=${labelQuery}`));
-  return issues.some((issue) => !issue.pull_request);
+  for (const issue of issues.filter((item) => !item.pull_request)) {
+    const comments = await client.paginate(client.repoPath(`/issues/${issue.number}/comments`));
+    if (comments.some((comment) => comment.user?.type === "Bot" && comment.body?.includes(COMPLETION_MARKER))) return true;
+  }
+  return false;
 }
 
 async function handleIssueOpened() {
@@ -111,7 +119,7 @@ async function handleIssueOpened() {
   if (!(await prerequisiteComplete(client, actor, exercise))) {
     await client.patch(client.repoPath(`/issues/${issue.number}`), { assignees: [actor] });
     await client.setStatusLabel(issue.number, "session:blocked");
-    await client.upsertComment(issue.number, SESSION_MARKER, `<!-- ${SESSION_MARKER} -->\n## 前置练习尚未完成\n\n请先完成练习 ${exercise - 1}。完成后重新打开本 Issue，机器人会再次检查。\n`);
+    await client.upsertComment(issue.number, SESSION_MARKER, `<!-- ${SESSION_MARKER} -->\n## 前置练习尚未完成\n\n请先完成当前课程版本的练习 ${exercise - 1}。完成后重新打开本 Issue，机器人会再次检查。\n`);
     await client.patch(client.repoPath(`/issues/${issue.number}`), { state: "closed", state_reason: "not_planned" });
     return;
   }
@@ -159,11 +167,11 @@ async function latestReviewsBlock(client, prNumber) {
   return hasBlockingReview(reviews);
 }
 
-async function conflictBaseIncluded(client, manifest, pr) {
-  if (!manifest.conflictBaseSha) return false;
+async function upstreamBaseIncluded(client, manifest, pr) {
+  if (!manifest.upstreamBaseSha) return false;
   const head = `${pr.head.repo.owner.login}:${pr.head.ref}`;
   try {
-    const compare = await client.get(client.repoPath(`/compare/${encodeURIComponent(manifest.conflictBaseSha)}...${encodeURIComponent(head)}`));
+    const compare = await client.get(client.repoPath(`/compare/${encodeURIComponent(manifest.upstreamBaseSha)}...${encodeURIComponent(head)}`));
     return compare.status === "ahead" || compare.status === "identical";
   } catch (error) {
     if (error instanceof GitHubApiError && [404, 422].includes(error.status)) return false;
@@ -183,17 +191,28 @@ async function collectPracticeInput(client, rawPr, manifest, feedbackComment) {
   const feedbackState = parseFeedbackState(feedbackComment?.body ?? "");
   const requestedAt = feedbackState.revisionRequestedAt ? Date.parse(feedbackState.revisionRequestedAt) : Infinity;
   const authorResponded = comments.some((comment) => comment.user?.login === manifest.actor && Date.parse(comment.created_at) > requestedAt);
+  const commitWorkspaces = manifest.exercise === 2
+    ? await Promise.all(rawCommits.map(async (commit) => {
+        try {
+          return await client.getContent(WORKSPACE_FILE, commit.sha, rawPr.head.repo.full_name);
+        } catch (error) {
+          if (error instanceof GitHubApiError && error.status === 404) return "";
+          throw error;
+        }
+      }))
+    : [];
   return {
     pr: normalizePr(rawPr),
     session: manifest,
     issue: normalizeIssue(rawIssue),
     files: files.map((file) => ({ filename: file.filename, status: file.status, changes: file.changes })),
     commits: rawCommits.map((commit) => ({ sha: commit.sha, message: commit.commit.message, parents: commit.parents })),
+    commitWorkspaces,
     workspace,
     feedbackState,
     authorResponded,
     humanChangesRequested,
-    conflictBaseIncluded: manifest.exercise === 4 ? await conflictBaseIncluded(client, manifest, rawPr) : false,
+    upstreamBaseIncluded: [6, 7, 8].includes(manifest.exercise) ? await upstreamBaseIncluded(client, manifest, rawPr) : false,
   };
 }
 
@@ -227,15 +246,18 @@ async function evaluatePullRequest(client, prNumber, { updateFeedback = true } =
     return { report, input: null };
   }
 
-  if (canInjectConflict({ pr: rawPr, manifest, referencedIssues: closingIssueNumbers(rawPr.body ?? "") })) {
-    manifest = await injectConflict(client, manifest);
+  if (canInjectUpstream({ pr: rawPr, manifest, referencedIssues: closingIssueNumbers(rawPr.body ?? "") })) {
+    manifest = await injectUpstream(client, manifest);
     rawPr = await client.get(client.repoPath(`/pulls/${prNumber}`));
   }
 
   const input = await collectPracticeInput(client, rawPr, manifest, feedbackComment);
   const report = gradePractice(input);
   const state = { ...input.feedbackState };
-  if (manifest.exercise === 3 && !state.revisionRequestedSha) {
+  if (manifest.exercise === 4 && rawPr.draft && !state.draftObservedAt) {
+    state.draftObservedAt = new Date().toISOString();
+  }
+  if ([5, 8].includes(manifest.exercise) && !state.revisionRequestedSha) {
     state.revisionRequestedSha = rawPr.head.sha;
     state.revisionRequestedAt = new Date().toISOString();
   }
@@ -301,7 +323,7 @@ async function finalizeSession(client, { manifest, prNumber }) {
     if (feedback) await client.patch(client.repoPath(`/issues/comments/${feedback.id}`), { body: `${feedback.body}${completion}` });
     else await client.post(client.repoPath(`/issues/${prNumber}/comments`), { body: `<!-- ${FEEDBACK_MARKER}:e30 -->\n## 🤖 练习自动反馈\n${completion}` });
   }
-  await client.upsertComment(manifest.issueNumber, "practice-completion:v1", `<!-- practice-completion:v1 -->\n## 🎉 练习 ${manifest.exercise} 完成\n\nPR #${prNumber} 已合并，专属训练分支已清理。${manifest.exercise < 4 ? ` 现在可以开始练习 ${manifest.exercise + 1}。` : " 你已经完成核心训练，可以前往真实开源仓库寻找适合的问题参与。"}\n`);
+  await client.upsertComment(manifest.issueNumber, COMPLETION_MARKER, `<!-- ${COMPLETION_MARKER} -->\n## 🎉 练习 ${manifest.exercise} 完成\n\nPR #${prNumber} 已合并，专属训练分支已清理。${manifest.exercise < 8 ? ` 现在可以开始练习 ${manifest.exercise + 1}。` : " 你已经完成核心训练，可以把这套流程迁移到课程小组或真实开源仓库。"}\n`);
   await client.setStatusLabel(manifest.issueNumber, "session:completed");
   await client.patch(client.repoPath(`/issues/${manifest.issueNumber}`), { state: "closed", state_reason: "completed" });
 }
@@ -343,10 +365,14 @@ async function handleCleanup() {
 }
 
 const LABEL_DEFINITIONS = {
-  "exercise:1": ["1f883d", "练习 1：第一次贡献"],
-  "exercise:2": ["1f883d", "练习 2：干净的提交历史"],
-  "exercise:3": ["1f883d", "练习 3：响应 Code Review"],
-  "exercise:4": ["1f883d", "练习 4：解决上游冲突"],
+  "exercise:1": ["1f883d", "练习 1：第一次 Pull Request"],
+  "exercise:2": ["1f883d", "练习 2：暂存区与原子提交"],
+  "exercise:3": ["1f883d", "练习 3：清晰地发起协作"],
+  "exercise:4": ["1f883d", "练习 4：Draft Pull Request"],
+  "exercise:5": ["1f883d", "练习 5：响应 Code Review"],
+  "exercise:6": ["1f883d", "练习 6：同步上游更新"],
+  "exercise:7": ["1f883d", "练习 7：解决合并冲突"],
+  "exercise:8": ["1f883d", "练习 8：协作综合练习"],
   "session:active": ["0969da", "训练会话正在进行"],
   "session:blocked": ["d1242f", "训练会话被前置条件阻止"],
   "session:needs-fix": ["d1242f", "自动检查发现必须修复项"],
@@ -371,15 +397,39 @@ async function handleMigrateLegacy() {
   const client = clientFromEnv();
   const [issues, pulls] = await Promise.all([
     client.paginate(client.repoPath("/issues?state=open")),
-    client.paginate(client.repoPath("/pulls?state=open&base=main")),
+    client.paginate(client.repoPath("/pulls?state=open")),
   ]);
-  const legacy = issues.filter((issue) => !issue.pull_request && issue.labels.some((label) => ["exercise1", "exercise2"].includes(label.name)));
-  for (const issue of legacy) {
-    for (const pr of pulls.filter((pull) => closingIssueNumbers(pull.body ?? "").includes(issue.number))) {
-      await client.post(client.repoPath(`/issues/${pr.number}/comments`), { body: "仓库练习系统已升级为临时会话分支。此旧版 PR 不再合入 main，请通过新的 Exercise Issue Form 重新开始。" });
+  const legacy = issues
+    .filter((issue) => !issue.pull_request && issue.labels.some((label) => ["exercise1", "exercise2"].includes(label.name)))
+    .map((issue) => ({ issue, branch: null, kind: "pre-session" }));
+
+  const activeSessions = issues.filter((issue) => (
+    !issue.pull_request &&
+    issue.labels.some((label) => label.name === "session:active") &&
+    exerciseFromLabels(issue.labels)
+  ));
+  for (const issue of activeSessions) {
+    const exercise = exerciseFromLabels(issue.labels);
+    const branch = `practice/ex${exercise}/issue-${issue.number}-${issue.user.login}`;
+    try {
+      const manifest = JSON.parse(await client.getContent(SESSION_FILE, branch));
+      if (manifest.schemaVersion < SCHEMA_VERSION) legacy.push({ issue, branch, kind: "schema-v1" });
+    } catch (error) {
+      if (!(error instanceof GitHubApiError) || error.status !== 404) throw error;
+    }
+  }
+
+  for (const { issue, branch, kind } of legacy) {
+    const relatedPulls = pulls.filter((pull) => branch
+      ? pull.base.ref === branch
+      : pull.base.ref === "main" && closingIssueNumbers(pull.body ?? "").includes(issue.number));
+    for (const pr of relatedPulls) {
+      await client.post(client.repoPath(`/issues/${pr.number}/comments`), { body: "课程已升级为八个递进关卡和 schema v2。此旧版 PR 无法安全沿用，请通过新的 Exercise Issue Form 重新开始；原有 commit 仍保留在你的 Fork 中。" });
       await client.patch(client.repoPath(`/pulls/${pr.number}`), { state: "closed" });
     }
-    await client.post(client.repoPath(`/issues/${issue.number}/comments`), { body: "仓库练习系统已升级。此旧会话现已结束，请通过新的 Exercise Issue Form 重新开始；原有内容仍保留在 GitHub 历史中。" });
+    if (branch) await client.deleteRef(branch);
+    if (kind === "schema-v1") await client.setStatusLabel(issue.number, "session:expired");
+    await client.post(client.repoPath(`/issues/${issue.number}/comments`), { body: "课程已升级为准备篇和八个递进关卡。此旧会话现已结束，请从新的学习地图和 Exercise Issue Form 重新开始；原有内容仍保留在 GitHub 历史中。" });
     await client.patch(client.repoPath(`/issues/${issue.number}`), { state: "closed", state_reason: "not_planned" });
   }
 }

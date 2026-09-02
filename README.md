@@ -1,57 +1,64 @@
-# Git / GitHub 开源贡献练习场
+# Git / GitHub 协作练习场
 
-这是一个面向 Git 和 GitHub 初学者的自动化练习仓库。你会使用真实的 Fork、Issue、branch、commit、Pull Request、Review 和冲突解决流程；机器人会在 PR 中指出具体问题、给出修复命令，并在通过后自动完成练习。
+这是一门可以直接在 GitHub 上完成的零基础实践课。你不需要先会 Git，也不需要找到队友：仓库会为每位学习者创建隔离的练习分支，机器人会像助教一样检查 Pull Request、指出问题并告诉你下一步。
 
-## 为什么练习不会弄乱 main
+完成后，你能够：
 
-每个练习 Issue 都会获得一个专属的临时上游分支：
+- 解释 Git、GitHub、仓库、commit、branch、Fork 和 Pull Request 的关系；
+- 从 Fork 开始完成一次规范的 GitHub 贡献；
+- 把改动拆成清楚的提交，并写出别人能评审的 PR；
+- 正确使用 Draft、处理 Review、同步上游并解决冲突；
+- 把同一套流程迁移到课程小组或真实开源项目。
+
+## 第一次来，从这里开始
+
+1. 打开[准备篇](docs/getting-started.md)，完成安装、配置和环境自检。
+2. 查看[学习地图](docs/learning-path.md)，了解八关分别解决什么问题。
+3. 阅读[第 1 课](docs/lessons/01-first-pull-request.md)，再按教程创建 Exercise 1 Issue。
+
+不要直接在本仓库的 `main` 上提交练习，也不要只凭 Issue 标题猜命令。每次创建练习 Issue 后，机器人都会回复本次专属的 base 分支、准确命令和创建 PR 的链接。
+
+## 八关路线
+
+| 关卡 | 只新增一个主要能力 | 预计时间 |
+| --- | --- | ---: |
+| 1 · 第一次 Pull Request | 走通 Fork → commit → PR | 25 分钟 |
+| 2 · 暂存区与原子提交 | 把两件事拆成两条 commit | 20 分钟 |
+| 3 · 清晰地发起协作 | 写好分支名、Issue 关联和 PR 说明 | 15 分钟 |
+| 4 · Draft Pull Request | 区分“分享进度”和“请求评审” | 15 分钟 |
+| 5 · 响应 Code Review | 在原 PR 中修改、push 和回复 | 20 分钟 |
+| 6 · 同步上游更新 | 在无冲突情况下 merge 或 rebase | 20 分钟 |
+| 7 · 解决合并冲突 | 理解冲突并保留双方意图 | 25 分钟 |
+| 8 · 协作综合练习 | 把说明、Review 和同步组合起来 | 30 分钟 |
+
+准备篇通常需要 20–40 分钟。课程可以分多次完成；练习连续 10 天无活动会收到提醒，14 天无活动才会清理临时会话。
+
+## 它怎样保护主干
+
+每个 Exercise Issue 都会获得一个专属临时上游分支：
 
 ```text
 practice/ex<关卡>/issue-<Issue 编号>-<GitHub 用户名>
 ```
 
-练习 PR 合入这个临时分支，而不是 `main`。通过后机器人会 squash merge、关闭 Issue 并删除临时分支。因此主干只保存课程与自动化代码，普通 clone 不会下载其他人的练习产物。
+你的练习 PR 合入这个临时分支，而不是 `main`。通过后机器人会 squash merge、关闭 Issue 并删除临时分支，所以主干只保存课程和自动化代码，不会积累所有人的练习文件。
 
-## 四关学习路线
+自动反馈分成两类：
 
-| 关卡 | 目标 | 必须完成 |
-| --- | --- | --- |
-| Exercise 1 | 第一次贡献 | Fork、topic branch、一条提交、关联 Issue、创建 PR |
-| Exercise 2 | 干净历史 | 新分支、恰好两条提交、无线性历史污染 |
-| Exercise 3 | 响应 Review | 在原 PR 中继续 commit 和 push，落实反馈 |
-| Exercise 4 | 解决冲突 | fetch 上游，使用 merge 或 rebase 解决真实冲突 |
+- **必须修复**：本关目标还没完成，检查是红灯；按“怎么做”修改原分支即可。
+- **改进建议**：当前关不拦截，但会提前提示后续关卡或真实协作中的规范。
 
-从仓库的 [New issue](https://github.com/lin594/code-contributing-practice/issues/new/choose) 页面选择 Exercise 1 开始。后续关卡必须按顺序完成。
+红灯不等于“操作失败”。第 4–8 关有意安排了 Draft、Review 或上游变化，第一次检查出现等待项正是练习的一部分。
 
-## 开始前
+## 卡住时
 
-你需要：
+- 根据当前现象查[故障排查](docs/troubleshooting.md)；
+- 不记得命令时查[Git 速查表](docs/git-cheatsheet.md)；
+- 遇到陌生词时查[术语表](docs/glossary.md)；
+- 想确认验收规则时查[八关练习说明](docs/exercises.md)。
 
-- 一个 GitHub 账号；
-- Git 2.23 或更高版本；
-- 能够使用终端执行基础命令；
-- 一个从本仓库创建的 Fork。
+本课程不会要求你在 Issue、PR、终端截图或日志中粘贴密码、Personal Access Token、SSH 私钥。遇到此类提示，请停止并向老师或维护者确认。
 
-第一次使用请完整阅读[开始指南](docs/getting-started.md)。四关的任务和验收规则见[练习说明](docs/exercises.md)。
+## 给教师和维护者
 
-## 自动反馈怎么看
-
-机器人会在 PR 中维护一条 `🤖 自动反馈` 评论：
-
-- **必须修复**：练习目标没有完成，检查会显示红灯，并给出准确修改方法；
-- **改进建议**：以 Warning 显示，不阻止练习完成；
-- **下一步**：告诉你应该继续 push、解决冲突还是等待自动合并。
-
-Commit message 推荐使用 `type: summary` 或 `type(scope): summary`，例如 `docs: add my practice notes`。PR 标题也推荐采用同样风格。格式不规范只会收到 Warning，不会单独导致练习失败。
-
-## 需要帮助
-
-- 常见报错和恢复命令：[故障排查](docs/troubleshooting.md)
-- 常用 Git 命令：[Git 速查表](docs/git-cheatsheet.md)
-- 改进课程或自动化：[贡献指南](CONTRIBUTING.md)
-
-完成四关后，可以寻找带有 `good first issue`、`documentation` 或 `help wanted` 标签的真实开源仓库进行实战。先阅读目标仓库自己的贡献指南，并以它的规则为准。
-
-## 给维护者
-
-部署标签、仓库权限、分支保护、旧会话迁移和测试账号验收步骤见[维护者手册](docs/maintainers.md)。在完成初始化前，不要对外开放新的 Exercise Issue Forms。
+部署标签、权限、分支保护、旧会话升级、安全边界和测试账号验收步骤见[维护者手册](docs/maintainers.md)。改进课程或自动化前请阅读[贡献指南](CONTRIBUTING.md)。

@@ -1,0 +1,28 @@
+name: "Exercise 5 · 响应 Code Review"
+description: 在同一个 PR 中修改、push 并回复反馈
+title: "[Exercise 5] "
+labels:
+  - exercise:5
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 4。机器人会故意提出一次必须处理的 Review。开始前阅读[第 5 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/05-review.md)。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 4。
+          required: true
+        - label: 我会继续更新原 PR 的 head branch，不新建 PR。
+          required: true
+        - label: 我会用评论说明改了什么、如何验证，而不只回复“done”。
+          required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: 收到 Review 后的顺序
+      placeholder: 例如：理解反馈 → 修改 → 自查 → commit/push → 回复。
+    validations:
+      required: true

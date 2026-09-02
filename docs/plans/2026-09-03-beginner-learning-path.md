@@ -10,6 +10,8 @@
 
 ---
 
+## Implementation Tasks
+
 ### Task 1: 固定课程契约和会话模型
 
 **Files:**
@@ -99,4 +101,3 @@
 5. 从 README 顺序读取准备篇、第一课、Issue Form、机器人回复和排错页，确认新生不需要猜下一步。
 6. 查看 `git diff`，确保没有覆盖无关用户改动。
 7. 创建清晰的 git commit。
-

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertMergeEligible, canInjectConflict, expiryDecision, hasBlockingReview } from "../../scripts/practice/lifecycle.mjs";
+import { assertMergeEligible, canInjectUpstream, expiryDecision, hasBlockingReview } from "../../scripts/practice/lifecycle.mjs";
 
 test("merge eligibility rejects stale heads and non-practice reports", () => {
   const valid = { report: { outcome: "pass", headSha: "abc" }, input: { session: { exercise: 1 } }, expectedHead: "abc" };
@@ -17,13 +17,18 @@ test("session expiry has stable reminder and expiration boundaries", () => {
   assert.throws(() => expiryDecision("not-a-date", { now }), /ISO date/);
 });
 
-test("only the session owner can trigger the one-time conflict mutation", () => {
-  const manifest = { exercise: 4, issueNumber: 42, actor: "octocat", baseBranch: "practice/ex4/issue-42-octocat" };
+test("only the session owner can trigger supported one-time upstream mutations", () => {
+  const manifest = { exercise: 7, issueNumber: 42, actor: "octocat", baseBranch: "practice/ex7/issue-42-octocat" };
   const pr = { user: { login: "octocat" }, base: { ref: manifest.baseBranch } };
-  assert.equal(canInjectConflict({ pr, manifest, referencedIssues: [42] }), true);
-  assert.equal(canInjectConflict({ pr: { ...pr, user: { login: "attacker" } }, manifest, referencedIssues: [42] }), false);
-  assert.equal(canInjectConflict({ pr, manifest, referencedIssues: [41] }), false);
-  assert.equal(canInjectConflict({ pr, manifest: { ...manifest, conflictBaseSha: "done" }, referencedIssues: [42] }), false);
+  for (const exercise of [6, 7, 8]) {
+    const candidate = { ...manifest, exercise, baseBranch: `practice/ex${exercise}/issue-42-octocat` };
+    assert.equal(canInjectUpstream({ pr: { ...pr, base: { ref: candidate.baseBranch } }, manifest: candidate, referencedIssues: [42] }), true);
+  }
+  assert.equal(canInjectUpstream({ pr, manifest, referencedIssues: [42] }), true);
+  assert.equal(canInjectUpstream({ pr: { ...pr, user: { login: "attacker" } }, manifest, referencedIssues: [42] }), false);
+  assert.equal(canInjectUpstream({ pr, manifest, referencedIssues: [41] }), false);
+  assert.equal(canInjectUpstream({ pr, manifest: { ...manifest, upstreamBaseSha: "done" }, referencedIssues: [42] }), false);
+  assert.equal(canInjectUpstream({ pr, manifest: { ...manifest, exercise: 5 }, referencedIssues: [42] }), false);
 });
 
 test("a comment review does not clear an outstanding change request", () => {

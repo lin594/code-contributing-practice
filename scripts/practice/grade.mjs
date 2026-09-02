@@ -38,6 +38,19 @@ function labelsOf(value = []) {
   return value.map((label) => (typeof label === "string" ? label : label.name));
 }
 
+function sectionContent(markdown, heading) {
+  const lines = String(markdown).split("\n");
+  const start = lines.findIndex((line) => line.trim() === `## ${heading}`);
+  if (start < 0) return "";
+  const end = lines.findIndex((line, index) => index > start && /^##\s+/.test(line));
+  return lines.slice(start + 1, end < 0 ? undefined : end).join("\n").trim();
+}
+
+function hasLearnerContent(markdown, heading) {
+  const content = sectionContent(markdown, heading);
+  return content.length >= 2 && !content.includes("TODO");
+}
+
 function gradeCommon(input, results) {
   const { pr, session, issue, files = [], commits = [] } = input;
 
@@ -49,7 +62,11 @@ function gradeCommon(input, results) {
 
   const references = closingIssueNumbers(pr.body);
   if (!references.includes(session.issueNumber)) {
-    results.push(fail("pr.closing-reference", `PR 正文没有正确引用练习 Issue #${session.issueNumber}。`, `在 PR 正文加入 \`Closes #${session.issueNumber}\`。`));
+    const summary = `PR 正文没有正确引用练习 Issue #${session.issueNumber}。`;
+    const remediation = `在 PR 正文加入 \`Closes #${session.issueNumber}\`。`;
+    results.push(session.exercise >= 3
+      ? fail("pr.closing-reference", summary, remediation)
+      : warn("pr.closing-reference", `${summary} 第 3 关会正式练习这个写法。`, remediation));
   } else {
     results.push(pass("pr.closing-reference", REQUIRED, `PR 已引用 Issue #${session.issueNumber}。`));
   }
@@ -110,20 +127,74 @@ function gradeCommon(input, results) {
 
   const title = pr.title.trim();
   if (title.length < 10 || title.length > 72 || /^(update|test|pr|练习|修改|提交)$/i.test(title) || !CONVENTIONAL_COMMIT.test(title)) {
-    results.push(warn("pr.title", `PR 标题“${title || "（空）"}”可以更清楚。`, `建议使用动作明确的标题，例如 \`docs: complete exercise ${session.exercise}\`；可直接在 GitHub PR 页面编辑。`));
+    const summary = `PR 标题“${title || "（空）"}”无法让评审者快速理解改动。`;
+    const remediation = `使用动作明确的标题，例如 \`docs: complete exercise ${session.exercise}\`；可直接在 GitHub PR 页面编辑。`;
+    results.push(session.exercise >= 3
+      ? fail("pr.title", summary, remediation)
+      : warn("pr.title", `${summary} 第 3 关会把清晰标题作为必需项。`, remediation));
   } else {
-    results.push(pass("pr.title", ADVISORY, "PR 标题清楚且符合推荐格式。"));
+    results.push(pass("pr.title", session.exercise >= 3 ? REQUIRED : ADVISORY, "PR 标题清楚且符合推荐格式。"));
   }
 
   if (!/^(?:exercise|docs|feat|fix)\//.test(pr.headRef)) {
-    results.push(warn("branch.name", `分支名“${pr.headRef}”可以表达得更清楚。`, `建议使用 \`exercise/${session.exercise}-${session.issueNumber}\`。`));
+    const summary = `分支名“${pr.headRef}”没有表达改动用途。`;
+    const remediation = `使用 \`exercise/${session.exercise}-${session.issueNumber}\`。如果错误分支已经创建 PR，请先关闭该 PR，再从同一专属 base 建立正确分支并继续引用本 Issue。`;
+    results.push(session.exercise >= 3
+      ? fail("branch.name", summary, remediation)
+      : warn("branch.name", `${summary} 第 3 关会正式练习分支命名。`, remediation));
+  } else {
+    results.push(pass("branch.name", session.exercise >= 3 ? REQUIRED : ADVISORY, "topic branch 名称能够表达用途。"));
   }
 
   return true;
 }
 
+function gradeReview(input, results, exercise, { responseRequired = false } = {}) {
+  const { feedbackState = {}, workspace = "" } = input;
+  const id = `exercise${exercise}.review`;
+  if (!feedbackState.revisionRequestedSha) {
+    results.push(pending(id, "机器人已完成第一次 Review，正在等待你修改。", "保留当前 PR，在同一分支继续修改、commit 和 push；不要新建 PR。"));
+    return;
+  }
+  if (feedbackState.revisionRequestedSha === input.pr.headSha) {
+    results.push(pending(id, "PR 还停留在机器人提出修改时的 commit。", "按照评论修改后，在当前分支 commit 并 push。"));
+    return;
+  }
+
+  const complete = exercise === 5
+    ? workspace.includes("状态：已根据反馈修改") && hasLearnerContent(workspace, "本次修改") && hasLearnerContent(workspace, "修改说明") && !workspace.includes("TODO")
+    : workspace.includes("状态：已完成协作修订") && hasLearnerContent(workspace, "Review 回复") && !workspace.includes("TODO");
+  if (!complete) {
+    const remediation = exercise === 5
+      ? "把状态改为“已根据反馈修改”，新增“## 修改说明”，并删除 TODO。"
+      : "完成所有 TODO，把状态改为“已完成协作修订”，并新增“## Review 回复”。";
+    results.push(fail(id, "已经收到新提交，但 Review 要求尚未完整落实。", remediation));
+  } else {
+    results.push(pass(id, REQUIRED, "已在同一 PR 中完成 Review 修改。"));
+  }
+
+  if (!input.authorResponded) {
+    results.push(responseRequired
+      ? fail(`exercise${exercise}.response`, "尚未通过 PR 评论回应 Review。", "在 PR 留言说明修改了什么，以及如何验证。")
+      : warn(`exercise${exercise}.response`, "尚未看到你对机器人反馈的文字回应。", "建议在 PR 留言简要说明你修改了什么，这是良好的开源协作习惯。"));
+  } else {
+    results.push(pass(`exercise${exercise}.response`, responseRequired ? REQUIRED : ADVISORY, "已在 PR 中回应 Review。"));
+  }
+}
+
+function gradeUpstream(input, results, exercise) {
+  const id = `exercise${exercise}.ancestry`;
+  if (!input.session.upstreamBaseSha) {
+    results.push(pending(id, "机器人正在准备上游更新。", "稍后刷新 PR；看到反馈后 fetch 专属上游分支，再 merge 或 rebase。"));
+  } else if (!input.upstreamBaseIncluded) {
+    results.push(fail(id, "你的分支尚未包含机器人注入的上游更新。", `执行 \`git fetch upstream ${input.session.baseBranch}\`，再 merge 或 rebase 该分支。`));
+  } else {
+    results.push(pass(id, REQUIRED, "分支已纳入最新上游提交。"));
+  }
+}
+
 function gradeExercise(input, results) {
-  const { session, commits = [], workspace = "", feedbackState = {} } = input;
+  const { session, commits = [], commitWorkspaces = [], workspace = "", feedbackState = {} } = input;
   const hasMergeCommit = commits.some((commit) => (commit.parents?.length ?? 1) > 1);
 
   if (session.exercise === 1) {
@@ -131,7 +202,9 @@ function gradeExercise(input, results) {
     else results.push(pass("exercise1.commit-count", REQUIRED, "练习 1 恰好包含一条提交。"));
     if (hasMergeCommit) results.push(fail("exercise1.no-merge", "第一次贡献不应包含 merge commit。", "从专属 base 重新建立 topic branch，并用一条普通提交完成练习。"));
 
-    const complete = !workspace.includes("TODO") && workspace.toLowerCase().includes(session.actor.toLowerCase()) && workspace.length >= 60;
+    const username = workspace.match(/^- GitHub 用户名：(.+)$/m)?.[1].trim() ?? "";
+    const direction = workspace.match(/^- 我希望参与的开源方向：(.+)$/m)?.[1].trim() ?? "";
+    const complete = !workspace.includes("TODO") && username.toLowerCase() === session.actor.toLowerCase() && direction.length >= 2;
     if (!complete) results.push(fail("exercise1.workspace", "自我介绍仍有占位符，或没有填写当前 GitHub 用户名。", `把 TODO 替换为你的内容，并在“GitHub 用户名”中填写 ${session.actor}。`));
     else results.push(pass("exercise1.workspace", REQUIRED, "第一次贡献内容已填写完整。"));
   }
@@ -141,38 +214,68 @@ function gradeExercise(input, results) {
     else results.push(pass("exercise2.commit-count", REQUIRED, "练习 2 恰好包含两条提交。"));
     if (hasMergeCommit) results.push(fail("exercise2.no-merge", "练习 2 的历史中包含 merge commit。", "从专属 base 重新建立分支，或使用 rebase 整理为两条线性提交。"));
     else results.push(pass("exercise2.no-merge", REQUIRED, "提交历史保持线性，没有混入 merge commit。"));
-    const complete = !workspace.includes("TODO") && workspace.includes("## 我学到的 Git 命令") && workspace.includes("## 为什么要保持提交历史干净");
+    const complete = !workspace.includes("TODO") && hasLearnerContent(workspace, "我学到的 Git 命令") && hasLearnerContent(workspace, "为什么要保持提交历史干净");
     if (!complete) results.push(fail("exercise2.workspace", "两部分练习内容尚未填写完整。", "分别在第一、第二条提交中完成模板的两个 TODO。"));
     else results.push(pass("exercise2.workspace", REQUIRED, "两次提交对应的内容均已完成。"));
+    const firstCommitIsAtomic = commitWorkspaces.length === 2
+      && !commitWorkspaces[0].includes("TODO：请在第一个 commit 中填写。")
+      && commitWorkspaces[0].includes("TODO：请在第二个 commit 中填写。")
+      && !commitWorkspaces[1].includes("TODO");
+    if (!firstCommitIsAtomic) results.push(fail("exercise2.atomicity", "两部分没有按要求分布在第一、第二条 commit 中。", "从专属 base 重新建立 topic branch：第一条只填写 Git 命令，第二条再填写保持历史干净的原因。"));
+    else results.push(pass("exercise2.atomicity", REQUIRED, "第一条 commit 只完成第一部分，第二条再完成其余内容。"));
   }
 
   if (session.exercise === 3) {
-    if (!feedbackState.revisionRequestedSha) {
-      results.push(pending("exercise3.review", "机器人已完成第一次 Review，正在等待你修改。", "保留当前 PR，在同一分支继续修改、commit 和 push；不要新建 PR。"));
-    } else if (feedbackState.revisionRequestedSha === input.pr.headSha) {
-      results.push(pending("exercise3.review", "PR 还停留在机器人提出修改时的 commit。", "按照评论修改后，在当前分支 commit 并 push。"));
-    } else {
-      const complete = workspace.includes("状态：已根据反馈修改") && workspace.includes("## 修改说明") && !workspace.includes("TODO");
-      if (!complete) results.push(fail("exercise3.review", "已经收到新提交，但指定的 Review 修改尚未完整落实。", "把状态改为“已根据反馈修改”，新增“## 修改说明”，并删除 TODO。"));
-      else results.push(pass("exercise3.review", REQUIRED, "已在同一 PR 中完成 Review 修改。"));
-      if (!input.authorResponded) results.push(warn("exercise3.response", "尚未看到你对机器人反馈的文字回应。", "建议在 PR 留言简要说明你修改了什么，这是良好的开源协作习惯。"));
-    }
+    const complete = !workspace.includes("TODO") && hasLearnerContent(workspace, "变更目的") && hasLearnerContent(workspace, "验证方式");
+    if (!complete) results.push(fail("exercise3.workspace", "协作说明尚未填写完整。", "填写“变更目的”和“验证方式”，让评审者知道为什么改、如何检查。"));
+    else results.push(pass("exercise3.workspace", REQUIRED, "变更目的和验证方式填写完整。"));
+    const visibleBody = input.pr.body.replace(/<!--[\s\S]*?-->/g, "");
+    const description = visibleBody.match(/^- 我完成了：[ \t]*(.+)$/m)?.[1].trim() ?? "";
+    if (description.length < 4) results.push(fail("exercise3.description", "PR 模板中的“我完成了”仍然为空或过于模糊。", "编辑 PR 正文，用一句完整的话概括实际完成的修改。"));
+    else results.push(pass("exercise3.description", REQUIRED, "PR 正文概括了实际修改。"));
     if (hasMergeCommit) results.push(fail("exercise3.no-merge", "本关不需要 merge commit。", "继续在原 topic branch 上直接 commit/push，必要时用 rebase 整理历史。"));
   }
 
   if (session.exercise === 4) {
-    if (!session.conflictBaseSha) {
-      results.push(pending("exercise4.injected", "机器人正在准备上游冲突。", "稍后刷新 PR，按评论执行 fetch 并解决冲突。"));
-    } else if (!input.conflictBaseIncluded) {
-      results.push(fail("exercise4.ancestry", "你的分支尚未包含机器人注入的上游更新。", `执行 \`git fetch upstream ${session.baseBranch}\`，再 merge 或 rebase 该分支并解决冲突。`));
+    if (!feedbackState.draftObservedAt) results.push(pending("exercise4.draft", "机器人还没有观察到 Draft 状态。", "把 PR 转为 Draft；如果尚未创建，请在创建按钮旁选择 Create draft pull request。"));
+    else results.push(pass("exercise4.draft", REQUIRED, "PR 曾以 Draft 状态分享，并已转为 Ready for review。"));
+    const complete = workspace.includes("状态：可以评审") && hasLearnerContent(workspace, "完成标准") && !workspace.includes("TODO");
+    if (!complete) results.push(fail("exercise4.workspace", "Draft 的完成标准尚未填写。", "填写完成标准并保留“状态：可以评审”。"));
+    else results.push(pass("exercise4.workspace", REQUIRED, "完成标准已填写。"));
+    if (hasMergeCommit) results.push(fail("exercise4.no-merge", "本关不需要 merge commit。", "从专属 base 重新建立 topic branch，保留一条普通提交。"));
+  }
+
+  if (session.exercise === 5) {
+    gradeReview(input, results, 5, { responseRequired: true });
+    if (hasMergeCommit) results.push(fail("exercise5.no-merge", "本关不需要 merge commit。", "继续在原 topic branch 上直接 commit/push。"));
+  }
+
+  if (session.exercise === 6) {
+    gradeUpstream(input, results, 6);
+    const complete = /^课程公告：上游已更新$/m.test(workspace) && hasLearnerContent(workspace, "我的同步笔记") && !workspace.includes("TODO");
+    if (!complete) results.push(fail("exercise6.workspace", "同步结果缺少上游公告或个人笔记。", "同步机器人提供的最新 base，并完成个人笔记；不要手工伪造公告。"));
+    else results.push(pass("exercise6.workspace", REQUIRED, "上游公告和个人笔记均已保留。"));
+  }
+
+  if (session.exercise === 7) {
+    gradeUpstream(input, results, 7);
+    const resolution = workspace.match(/^最终内容：(.+)$/m)?.[1] ?? "";
+    if (!resolution.includes("上游更新") || !resolution.includes("我的修改")) {
+      results.push(fail("exercise7.resolution", "冲突结果没有同时保留“上游更新”和“我的修改”。", "编辑冲突标记之间的内容，保留双方意图，再 git add、commit 并 push。"));
     } else {
-      results.push(pass("exercise4.ancestry", REQUIRED, "分支已纳入最新上游提交。"));
+      results.push(pass("exercise7.resolution", REQUIRED, "冲突解决结果保留了双方内容。"));
     }
-    if (!workspace.includes("上游更新") || !workspace.includes("我的修改")) {
-      results.push(fail("exercise4.resolution", "冲突结果没有同时保留“上游更新”和“我的修改”。", "编辑冲突标记之间的内容，保留双方文字，再 git add、commit 并 push。"));
-    } else {
-      results.push(pass("exercise4.resolution", REQUIRED, "冲突解决结果保留了双方内容。"));
-    }
+  }
+
+  if (session.exercise === 8) {
+    gradeUpstream(input, results, 8);
+    gradeReview(input, results, 8, { responseRequired: true });
+    const complete = /^协作约定：提交前先同步上游并回应 Review$/m.test(workspace)
+      && hasLearnerContent(workspace, "变更目的")
+      && hasLearnerContent(workspace, "自测结果")
+      && !workspace.includes("TODO");
+    if (!complete) results.push(fail("exercise8.workspace", "综合练习内容或上游协作约定不完整。", "同步最新 base，完成变更目的和自测结果，并保留维护者补充的协作约定。"));
+    else results.push(pass("exercise8.workspace", REQUIRED, "综合练习内容和协作约定完整。"));
   }
 }
 

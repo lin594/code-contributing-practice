@@ -1,0 +1,29 @@
+name: "Exercise 8 · 协作综合练习"
+description: 综合使用清晰 PR、上游同步、Review 修改和回复
+title: "[Exercise 8] "
+labels:
+  - exercise:8
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本关要求先完成 Exercise 7。机器人会同时模拟上游更新和 Review；第一次检查不会通过。开始前阅读[第 8 课](https://github.com/lin594/code-contributing-practice/blob/main/docs/lessons/08-capstone.md)。
+  - type: checkboxes
+    id: preparation
+    attributes:
+      label: 开始前确认
+      options:
+        - label: 我已经完成 Exercise 7。
+          required: true
+        - label: 我会根据状态依次同步、修改、自查和回复，而不是另开 PR。
+          required: true
+        - label: 我会保留维护者的协作约定，不手工猜测上游结果。
+          required: true
+  - type: textarea
+    id: transfer
+    attributes:
+      label: 你准备把这套流程用在哪里？
+      description: 可以是课程小组、个人项目或想参与的开源方向，不影响判定。
+      placeholder: 用一两句话回答。
+    validations:
+      required: true
