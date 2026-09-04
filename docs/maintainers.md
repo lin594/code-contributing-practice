@@ -2,12 +2,12 @@
 
 ## 首次部署或从四关版升级
 
-1. 合并课程与自动化后，在 Actions 运行 **Practice / Administration**，选择 `bootstrap-labels`，创建/更新 `exercise:1`–`exercise:8` 和 session labels。
+1. 合并课程与自动化后，在 Actions 运行 **Practice / Administration**，选择 `bootstrap-labels`，创建/更新 `exercise:1`–`exercise:9` 和 session labels。
 2. 如果仓库曾开放旧练习，再运行同一 workflow，选择 `close-legacy-sessions`，并在 confirmation 输入 `CLOSE_LEGACY`。
 3. 在 Settings → Actions → General 中允许 workflow 获得读写 `GITHUB_TOKEN`；每个 workflow 仍按 job 声明显式权限。
 4. 只启用 squash merge，关闭 merge commit 和 rebase merge。
 5. 为 `main` 建立 ruleset：禁止 force push 和删除，要求 Pull Request、至少一次批准，并要求 `CI / Tests`、`CI / Workflow lint`、`CI / Workflow security`。
-6. 使用独立测试账号按本页验收矩阵走完八关，再向学生发仓库链接。
+6. 使用独立测试账号按本页验收矩阵走完九关，再向学生发仓库链接。
 
 迁移操作会处理两类 open 旧会话：早期 `exercise1`/`exercise2` Issue 及其指向 `main` 的 PR；四关版 `session:active` Issue 中 manifest schema 低于当前版本的临时分支及关联 PR。它会留言、关闭 PR/Issue，并删除旧临时 base，不删除学员 Fork 中的 commit。当前 schema 会话不会被选中。前置关卡还会检查 `practice-completion:v2` 评论，因此旧版 completed Issue 不会错误解锁新课程的后续关卡。
 
@@ -16,11 +16,11 @@
 1. 学员创建带 `exercise:N` 的 Issue Form。
 2. Session workflow 检查 Exercise N−1 的 `session:completed` Issue，为学员创建独立 base、manifest 和 workspace。
 3. 学员从该 base 建立 Fork topic branch，并向临时 base 提交 PR。
-4. Grade workflow 对 PR 元数据和 Fork 文件做只读 API 检查；第 4 关记录 Draft，第 5/8 关记录 Review head，第 6/7/8 关按需修改可信 base。
+4. Grade workflow 对 PR 元数据和 Fork 文件做只读 API 检查；第 4 关记录 Draft，第 5/8 关记录 Review head，第 6/7/8 关按需修改可信 base，第 9 关记录失败 head 并运行只读 CI Lab。
 5. 学员 push 或在 PR 留言时重新判定。通过后 merge job 重新读取 exact head、完整判定并 squash merge。
 6. Finalize 删除临时 base、关闭 Issue 并标记 `session:completed`。
 
-`issue_comment` 触发用于让第 5/8 关的作者回复可以直接复查；普通 Issue 评论和 closed PR 评论会被跳过。由仓库 `GITHUB_TOKEN` 产生的机器人评论不会递归触发新 workflow。
+`issue_comment` 触发用于让第 5/8 关的 Review 回复和第 9 关的 SHA 验证评论可以直接复查；普通 Issue 评论和 closed PR 评论会被跳过。由仓库 `GITHUB_TOKEN` 产生的机器人评论不会递归触发新 workflow。
 
 ## 权限与安全边界
 
@@ -29,6 +29,7 @@
 - checkout 始终来自默认分支，且 `persist-credentials: false`；
 - 不 fetch、checkout、安装或执行 PR head；
 - Fork 的 workspace、标题、正文、评论和分支名只通过 GitHub API 读取为数据；
+- 第 9 关 CI Lab 只用默认分支的可信链接检查器解析 workspace，以 `contents: read`、`pull-requests: read` 获取数据，`issues: write` 仅用于把通过的 exact head 写回机器人反馈状态；绝不执行 workspace 内容；
 - 上游注入只允许本人、正确 base、正确 Issue 关联且 exercise 为 6/7/8 的会话；
 - 自动合并 job 重新运行完整判题，并用已判定的 exact head SHA 调用 merge API；
 - 练习只能修改 `.practice/workspace.md`，任何 workflow、脚本或 manifest 变更都会阻断；
@@ -60,14 +61,16 @@ CI 中的 `check-source.mjs` 会阻止未固定 SHA 的 Actions 和常见 privil
 | 6 | merge 路线和 rebase 路线都通过 | 手抄公告但不含上游 SHA 阻断 |
 | 7 | merge/rebase 冲突都可完成 | 丢掉任一方内容或缺上游 SHA 阻断 |
 | 8 | 同步、Review 修改、回复、自测组合通过 | 四项分别缺失时都阻断 |
+| 9 | 失败 SHA、新 head、绿色 CI Lab、完整诊断、当前 SHA 评论通过 | 提前修复、旧 SHA、日志仍失败或缺任一证据均阻断 |
 
 每条正向路径还要确认：PR 最终为 merged、Issue 为 completed/closed、临时 base 不存在、Fork/local branch 未被机器人删除、`main` tree 没有学员产物。
 
 ## 发布前人工走查
 
 - 从 README 出发，不借助维护者知识完成准备篇和第 1 课；动态值均来自机器人评论。
-- 检查八个 Issue Form 在 New issue 页面按顺序显示，链接指向正确 lesson。
+- 检查九个 Issue Form 在 New issue 页面按顺序显示，链接指向正确 lesson。
 - 在第 5 关先 push 后评论，确认评论事件复查并自动合并。
 - 第 6/7 关分别使用 merge 与 rebase 测试，覆盖 `--force-with-lease` 路径。
+- 第 9 关确认首次 CI Lab 红灯包含文件、行号和本地命令；本地复现后 push 新 head，等待 CI Lab 变绿，再用当前短 SHA 评论并确认自动合并。
 - 评论普通 Issue、closed PR，确认不会运行有效判题或改写反馈。
 - 创建普通 `main` 维护 PR，确认只收到建议、永不触发练习自动合并。

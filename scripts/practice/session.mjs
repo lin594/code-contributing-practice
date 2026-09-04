@@ -169,6 +169,33 @@ TODO：说明这次改动为谁解决什么问题。
 
 TODO：写出你检查过的内容。
 `,
+    9: `# 从 CI 失败中定位问题
+
+- 学习者：TODO
+- 项目协作规则：[贡献指南](../docs/contributing.md)
+
+创建 PR 前，只把上面的“学习者”改成你的 GitHub 用户名。请暂时保留失效链接和下面的 TODO，让 CI 先记录一次真实失败。
+
+## 失败的 check
+
+TODO：从 PR 的 Checks 区域记录 check 名称。
+
+## 失败的 step
+
+TODO：从 Details 日志记录最先给出可行动信息的 step。
+
+## 第一条可行动错误
+
+TODO：记录文件、行号和错误原因，不要只写 exit code 1。
+
+## 本地复现
+
+TODO：记录命令和本地失败结果。
+
+## 修复内容
+
+TODO：根据日志修复链接，并说明修改了什么。
+`,
   };
   if (!templates[exercise]) throw new Error("unknown exercise");
   return templates[exercise];
@@ -187,6 +214,9 @@ export function issueInstructions({ manifest, repositoryUrl }) {
   const title = EXERCISE_TITLES.get(manifest.exercise);
   const lesson = EXERCISE_LESSONS.get(manifest.exercise);
   const compareUrl = `${repositoryUrl}/compare/${encodeURIComponent(branch)}...${encodeURIComponent(`${manifest.actor}:${head}`)}?expand=1&template=exercise.md`;
+  const editingInstructions = manifest.exercise === 9
+    ? `先只把 \`${WORKSPACE_FILE}\` 中的“学习者”改成你的 GitHub 用户名，保留失效链接和诊断 TODO，commit 并 push，让 CI 先记录一次失败。`
+    : `只修改 \`${WORKSPACE_FILE}\`，完成后 commit 并 push 到你 Fork 中的同名分支。`;
   return `<!-- practice-session:v1 -->
 ## 练习 ${manifest.exercise}：${title} 已准备好
 
@@ -200,7 +230,7 @@ git fetch upstream ${branch}
 git switch -c ${head} upstream/${branch}
 \`\`\`
 
-只修改 \`${WORKSPACE_FILE}\`，完成后 commit 并 push 到你 Fork 中的同名分支。然后[创建 Pull Request](${compareUrl})，确认 base 是 \`${branch}\`，并在正文保留 \`Closes #${manifest.issueNumber}\`。
+${editingInstructions} 然后[创建 Pull Request](${compareUrl})，确认 base 是 \`${branch}\`，并在正文保留 \`Closes #${manifest.issueNumber}\`。
 
 > 练习 PR 合入临时分支，因此 Issue 的关闭由训练机器人代替 GitHub 完成；在真实开源仓库的默认分支 PR 中，同样的 \`Closes\` 写法会原生关联并关闭 Issue。
 `;

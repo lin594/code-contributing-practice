@@ -24,7 +24,8 @@
 | Draft PR | 分享未完成改动、暂不正式请求评审的 PR | Ready for review 后才表示可以正式评审 |
 | Review | 对 PR 变化的逐行或总体反馈 | 新 commit push 到同一分支会更新原 PR |
 | conflict | Git 无法自动判断如何组合的竞争变化 | 解决冲突是做内容决定，不是删除标记就结束 |
-| CI / check | PR 上自动运行的检查 | 红灯先看具体日志或机器人“怎么做” |
+| CI / check | 针对某个 commit 自动运行的测试、构建或规则检查 | 绿灯只对相应 SHA 有效；红灯先进入失败 job/step 看具体日志 |
+| job / step | 一次 CI run 中的任务和任务里的执行步骤 | 最后的 exit code 只表示失败，前面的具体错误才通常可行动 |
 | SHA | commit 的唯一标识符 | 历史重写后同一内容也可能有不同 SHA |
 
 记不清时不必猜：先运行 `git status`，再回到对应教程或[速查表](git-cheatsheet.md)。

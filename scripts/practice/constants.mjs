@@ -1,5 +1,5 @@
 export const SCHEMA_VERSION = 2;
-export const EXERCISE_COUNT = 8;
+export const EXERCISE_COUNT = 9;
 export const SESSION_FILE = ".practice/session.json";
 export const WORKSPACE_FILE = ".practice/workspace.md";
 export const FEEDBACK_MARKER = "practice-feedback:v1";
@@ -18,6 +18,7 @@ export const EXERCISE_LABELS = new Map([
   [6, "exercise:6"],
   [7, "exercise:7"],
   [8, "exercise:8"],
+  [9, "exercise:9"],
 ]);
 
 export const EXERCISE_TITLES = new Map([
@@ -29,6 +30,7 @@ export const EXERCISE_TITLES = new Map([
   [6, "同步上游更新"],
   [7, "解决合并冲突"],
   [8, "协作综合练习"],
+  [9, "从 CI 失败中定位问题"],
 ]);
 
 export const EXERCISE_LESSONS = new Map([
@@ -40,6 +42,7 @@ export const EXERCISE_LESSONS = new Map([
   [6, "docs/lessons/06-sync-upstream.md"],
   [7, "docs/lessons/07-conflicts.md"],
   [8, "docs/lessons/08-capstone.md"],
+  [9, "docs/lessons/09-ci-diagnostics.md"],
 ]);
 
 export const STATUS_LABELS = [
@@ -59,4 +62,4 @@ export const ALL_MANAGED_LABELS = [
 
 export const CONVENTIONAL_COMMIT = /^(build|ci|docs|feat|fix|perf|refactor|test|style|chore|revert)(\([a-z0-9][a-z0-9-]*\))?: \S.{0,100}$/;
 export const CLOSING_REFERENCE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s*#(\d+)\b/gi;
-export const SESSION_BRANCH = /^practice\/ex([1-8])\/issue-(\d+)-([A-Za-z0-9-]{1,39})$/;
+export const SESSION_BRANCH = /^practice\/ex([1-9])\/issue-(\d+)-([A-Za-z0-9-]{1,39})$/;

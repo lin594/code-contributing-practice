@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseFeedbackState, renderFeedback } from "../../scripts/practice/feedback.mjs";
+import { parseFeedbackState, renderFeedback, replaceFeedbackState } from "../../scripts/practice/feedback.mjs";
 
 test("feedback state round trips through an inert HTML marker", () => {
   const state = { revisionRequestedSha: "abc123", text: "`$(touch nope)` | 中文" };
@@ -13,4 +13,12 @@ test("feedback escapes table delimiters and newlines", () => {
   const body = renderFeedback({ outcome: "fail", headSha: "1234567890abcdef", session: { exercise: 1 }, warnings: 0, results: [{ id: "unsafe|id", level: "required", status: "fail", summary: "line1\nline2 | <details>", remediation: "use `code`" }], nextActions: ["fix"] });
   assert.match(body, /unsafe\\\|id/);
   assert.match(body, /line1 line2 \\\| &lt;details&gt;/);
+});
+
+test("feedback state can be updated without changing the visible report", () => {
+  const body = renderFeedback({ outcome: "fail", headSha: "1234567890abcdef", session: { exercise: 9 }, warnings: 0, results: [], nextActions: ["read logs"] }, { ciFailureObservedSha: "old" });
+  const replaced = replaceFeedbackState(body, { ciFailureObservedSha: "old", ciPassedSha: "new" });
+  assert.deepEqual(parseFeedbackState(replaced), { ciFailureObservedSha: "old", ciPassedSha: "new" });
+  assert.equal(replaced.replace(/<!--[^>]+-->/, ""), body.replace(/<!--[^>]+-->/, ""));
+  assert.throws(() => replaceFeedbackState("no marker", {}), /marker is missing/);
 });

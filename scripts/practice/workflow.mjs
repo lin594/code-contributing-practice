@@ -9,10 +9,11 @@ import {
   SESSION_MARKER,
   WORKSPACE_FILE,
 } from "./constants.mjs";
-import { parseFeedbackState, renderFeedback } from "./feedback.mjs";
-import { closingIssueNumbers, gradePractice, maintenanceReport } from "./grade.mjs";
+import { parseFeedbackState, renderFeedback, replaceFeedbackState } from "./feedback.mjs";
+import { closingIssueNumbers, gradePractice, hasCurrentCiVerification, maintenanceReport } from "./grade.mjs";
 import { GitHubApiError, GitHubClient } from "./github.mjs";
 import { assertMergeEligible, canInjectUpstream, expiryDecision, hasBlockingReview } from "./lifecycle.mjs";
+import { formatGitHubAnnotations, formatLinkFailures, validateMarkdownLinks } from "./markdown-links.mjs";
 import {
   createManifest,
   exerciseFromLabels,
@@ -179,6 +180,22 @@ async function upstreamBaseIncluded(client, manifest, pr) {
   }
 }
 
+async function remoteCiLabResult(client, rawPr, workspace) {
+  return validateMarkdownLinks({
+    sourcePath: WORKSPACE_FILE,
+    content: workspace,
+    exists: async (target) => {
+      try {
+        await client.getContent(target, rawPr.head.sha, rawPr.head.repo.full_name);
+        return true;
+      } catch (error) {
+        if (error instanceof GitHubApiError && error.status === 404) return false;
+        throw error;
+      }
+    },
+  });
+}
+
 async function collectPracticeInput(client, rawPr, manifest, feedbackComment) {
   const [rawIssue, files, rawCommits, comments, humanChangesRequested, workspace] = await Promise.all([
     client.get(client.repoPath(`/issues/${manifest.issueNumber}`)),
@@ -201,6 +218,12 @@ async function collectPracticeInput(client, rawPr, manifest, feedbackComment) {
         }
       }))
     : [];
+  const ciLab = manifest.exercise === 9 ? await remoteCiLabResult(client, rawPr, workspace) : null;
+  const normalizedComments = comments.map((comment) => ({
+    author: comment.user?.login ?? "",
+    body: comment.body ?? "",
+    createdAt: comment.created_at,
+  }));
   return {
     pr: normalizePr(rawPr),
     session: manifest,
@@ -213,6 +236,14 @@ async function collectPracticeInput(client, rawPr, manifest, feedbackComment) {
     authorResponded,
     humanChangesRequested,
     upstreamBaseIncluded: [6, 7, 8].includes(manifest.exercise) ? await upstreamBaseIncluded(client, manifest, rawPr) : false,
+    ciLab,
+    ciCheckPassed: manifest.exercise === 9 && feedbackState.ciPassedSha === rawPr.head.sha,
+    authorCiVerified: manifest.exercise === 9 && hasCurrentCiVerification({
+      comments: normalizedComments,
+      actor: manifest.actor,
+      headSha: rawPr.head.sha,
+      verifiedAfter: feedbackState.ciPassedAt,
+    }),
   };
 }
 
@@ -261,6 +292,10 @@ async function evaluatePullRequest(client, prNumber, { updateFeedback = true } =
     state.revisionRequestedSha = rawPr.head.sha;
     state.revisionRequestedAt = new Date().toISOString();
   }
+  if (manifest.exercise === 9 && !input.ciLab?.ok && !state.ciFailureObservedSha) {
+    state.ciFailureObservedSha = rawPr.head.sha;
+    state.ciFailureObservedAt = new Date().toISOString();
+  }
   if (updateFeedback) {
     await client.upsertComment(prNumber, FEEDBACK_MARKER, renderFeedback(report, state));
     await client.setStatusLabel(prNumber, report.outcome === "pass" ? "session:ready" : "session:needs-fix");
@@ -281,6 +316,50 @@ async function handleGradePr() {
   const eligible = report.outcome === "pass" && Boolean(input?.session);
   writeOutput({ eligible, outcome: report.outcome, head_sha: report.headSha, pr_number: prNumber, issue_number: input?.session.issueNumber ?? "", base_branch: input?.session.baseBranch ?? "" });
   writeSummary(renderFeedback(report, input?.feedbackState ?? {}));
+}
+
+async function handleCiLabPr() {
+  const event = loadEvent();
+  const prNumber = event.pull_request?.number ?? event.issue?.number;
+  if (!prNumber) throw new Error("This event does not identify a pull request");
+  const client = clientFromEnv();
+  const rawPr = await client.get(client.repoPath(`/pulls/${prNumber}`));
+  if (event.pull_request?.head?.sha !== rawPr.head.sha) throw new Error("PR head changed while the CI lab was running");
+  const session = parseSessionBranch(rawPr.base.ref);
+  if (session?.exercise !== 9) throw new Error("CI lab can only run for exercise 9");
+  const workspace = await client.getContent(WORKSPACE_FILE, rawPr.head.sha, rawPr.head.repo.full_name);
+  const result = await remoteCiLabResult(client, rawPr, workspace);
+  if (!result.ok) {
+    console.log(formatGitHubAnnotations(result));
+    console.error(formatLinkFailures(result));
+    console.error("\nReproduce locally: npm run check:ci-lab");
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`PASS ${WORKSPACE_FILE} — all local Markdown links resolve to files.`);
+}
+
+async function handleRecordCiLabPass() {
+  const event = loadEvent();
+  const prNumber = event.pull_request?.number;
+  const expectedHead = event.pull_request?.head?.sha;
+  if (!prNumber || !expectedHead) throw new Error("A pull_request_target event is required");
+  const client = clientFromEnv();
+  const rawPr = await client.get(client.repoPath(`/pulls/${prNumber}`));
+  if (rawPr.head.sha !== expectedHead) throw new Error("PR head changed before the CI result was recorded");
+  const session = parseSessionBranch(rawPr.base.ref);
+  if (session?.exercise !== 9) throw new Error("CI lab can only record exercise 9");
+  const workspace = await client.getContent(WORKSPACE_FILE, expectedHead, rawPr.head.repo.full_name);
+  const result = await remoteCiLabResult(client, rawPr, workspace);
+  if (!result.ok) throw new Error("Cannot record a passing SHA for a failing CI lab");
+  const comments = await client.paginate(client.repoPath(`/issues/${prNumber}/comments`));
+  const feedback = comments.find((comment) => comment.user?.type === "Bot" && comment.body?.includes(FEEDBACK_MARKER));
+  if (!feedback) throw new Error("Practice feedback must exist before recording the CI result");
+  const state = parseFeedbackState(feedback.body);
+  if (!state.ciFailureObservedSha) throw new Error("The planned CI failure must be observed before a passing SHA is recorded");
+  const updated = { ...state, ciPassedSha: expectedHead, ciPassedAt: new Date().toISOString() };
+  await client.patch(client.repoPath(`/issues/comments/${feedback.id}`), { body: replaceFeedbackState(feedback.body, updated) });
+  console.log(`Recorded passing CI evidence for head ${expectedHead.slice(0, 12)}.`);
 }
 
 async function handleMergePr() {
@@ -323,7 +402,7 @@ async function finalizeSession(client, { manifest, prNumber }) {
     if (feedback) await client.patch(client.repoPath(`/issues/comments/${feedback.id}`), { body: `${feedback.body}${completion}` });
     else await client.post(client.repoPath(`/issues/${prNumber}/comments`), { body: `<!-- ${FEEDBACK_MARKER}:e30 -->\n## 🤖 练习自动反馈\n${completion}` });
   }
-  await client.upsertComment(manifest.issueNumber, COMPLETION_MARKER, `<!-- ${COMPLETION_MARKER} -->\n## 🎉 练习 ${manifest.exercise} 完成\n\nPR #${prNumber} 已合并，专属训练分支已清理。${manifest.exercise < 8 ? ` 现在可以开始练习 ${manifest.exercise + 1}。` : " 你已经完成核心训练，可以把这套流程迁移到课程小组或真实开源仓库。"}\n`);
+  await client.upsertComment(manifest.issueNumber, COMPLETION_MARKER, `<!-- ${COMPLETION_MARKER} -->\n## 🎉 练习 ${manifest.exercise} 完成\n\nPR #${prNumber} 已合并，专属训练分支已清理。${manifest.exercise < 9 ? ` 现在可以开始练习 ${manifest.exercise + 1}。` : " 你已经完成核心训练，可以把这套流程迁移到课程小组或真实开源仓库。"}\n`);
   await client.setStatusLabel(manifest.issueNumber, "session:completed");
   await client.patch(client.repoPath(`/issues/${manifest.issueNumber}`), { state: "closed", state_reason: "completed" });
 }
@@ -373,6 +452,7 @@ const LABEL_DEFINITIONS = {
   "exercise:6": ["1f883d", "练习 6：同步上游更新"],
   "exercise:7": ["1f883d", "练习 7：解决合并冲突"],
   "exercise:8": ["1f883d", "练习 8：协作综合练习"],
+  "exercise:9": ["1f883d", "练习 9：从 CI 失败中定位问题"],
   "session:active": ["0969da", "训练会话正在进行"],
   "session:blocked": ["d1242f", "训练会话被前置条件阻止"],
   "session:needs-fix": ["d1242f", "自动检查发现必须修复项"],
@@ -424,12 +504,12 @@ async function handleMigrateLegacy() {
       ? pull.base.ref === branch
       : pull.base.ref === "main" && closingIssueNumbers(pull.body ?? "").includes(issue.number));
     for (const pr of relatedPulls) {
-      await client.post(client.repoPath(`/issues/${pr.number}/comments`), { body: "课程已升级为八个递进关卡和 schema v2。此旧版 PR 无法安全沿用，请通过新的 Exercise Issue Form 重新开始；原有 commit 仍保留在你的 Fork 中。" });
+      await client.post(client.repoPath(`/issues/${pr.number}/comments`), { body: "课程已升级为九个递进关卡和 schema v2。此旧版 PR 无法安全沿用，请通过新的 Exercise Issue Form 重新开始；原有 commit 仍保留在你的 Fork 中。" });
       await client.patch(client.repoPath(`/pulls/${pr.number}`), { state: "closed" });
     }
     if (branch) await client.deleteRef(branch);
     if (kind === "schema-v1") await client.setStatusLabel(issue.number, "session:expired");
-    await client.post(client.repoPath(`/issues/${issue.number}/comments`), { body: "课程已升级为准备篇和八个递进关卡。此旧会话现已结束，请从新的学习地图和 Exercise Issue Form 重新开始；原有内容仍保留在 GitHub 历史中。" });
+    await client.post(client.repoPath(`/issues/${issue.number}/comments`), { body: "课程已升级为准备篇和九个递进关卡。此旧会话现已结束，请从新的学习地图和 Exercise Issue Form 重新开始；原有内容仍保留在 GitHub 历史中。" });
     await client.patch(client.repoPath(`/issues/${issue.number}`), { state: "closed", state_reason: "not_planned" });
   }
 }
@@ -437,6 +517,8 @@ async function handleMigrateLegacy() {
 const handlers = {
   "issue-opened": handleIssueOpened,
   "grade-pr": handleGradePr,
+  "ci-lab-pr": handleCiLabPr,
+  "record-ci-lab-pass": handleRecordCiLabPass,
   "merge-pr": handleMergePr,
   cleanup: handleCleanup,
   bootstrap: handleBootstrap,

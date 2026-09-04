@@ -79,11 +79,23 @@ git push -u origin exercise/1-ISSUE_NUMBER
 
 PR 正文模板会带 `Closes #Issue编号`。本关写错只产生 Warning，第 3 关会正式学习它。点击创建后等待 `Practice / Grade`；不要关闭 PR 或为了红灯再建一个 PR。
 
+## 第一次判断 PR 是否通过
+
+不要把“AI 说代码没问题”或“机器人已经留言”当作通过。自动检查必须实际运行在 PR 当前 commit 上：
+
+- 黄色圆点或 `queued` / `in progress` 表示还没有结论；
+- 红色叉号表示至少一个要求未满足，点击 **Details** 查看对应 job 和失败 step；
+- 绿色勾表示该 check 对它显示的 commit 执行成功，但仍要确认没有 Changes requested 等其他门禁；
+- 本课程还会自动合并，所以最终以 PR 显示 **Merged** 为完成。
+
+机器人评论把结果翻译成“必须修复”和“怎么做”，便于第一关使用；check 状态和它对应的 head SHA 才是自动化执行证据。第 9 课会专门练习从红灯进入日志、本地复现并验证新 commit。
+
 ## 通过后你应能解释
 
 - Fork 和 clone 分别发生在 GitHub 还是本地？
 - `git commit` 与 `git push` 的边界是什么？
 - PR 的 base 和 head 分别指向哪里？
+- 为什么 AI 的判断或旧 commit 的绿灯不能证明当前 PR 已通过？
 
 能用自己的话回答后，进入[第 2 课：暂存区与原子提交](02-atomic-commits.md)。
 

@@ -14,8 +14,8 @@ function filesBelow(directory) {
   });
 }
 
-test("all eight exercises have metadata, a lesson and an Issue Form", () => {
-  assert.equal(EXERCISE_COUNT, 8);
+test("all nine exercises have metadata, a lesson and an Issue Form", () => {
+  assert.equal(EXERCISE_COUNT, 9);
   for (let exercise = 1; exercise <= EXERCISE_COUNT; exercise += 1) {
     assert.ok(EXERCISE_LABELS.get(exercise));
     assert.ok(EXERCISE_TITLES.get(exercise));
@@ -45,11 +45,32 @@ test("local Markdown links in learner-facing documents resolve to files", () => 
   assert.deepEqual(missing, []);
 });
 
-test("learner-facing overview no longer advertises the retired four-stage course", () => {
+test("learner-facing overview advertises the nine-stage course", () => {
   const files = [
     path.join(root, "README.md"),
     path.join(root, "docs/learning-path.md"),
     path.join(root, "docs/exercises.md"),
   ];
-  for (const file of files) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /四关/);
+  for (const file of files) {
+    const content = fs.readFileSync(file, "utf8");
+    assert.doesNotMatch(content, /四关/);
+    assert.match(content, /九关|九个递进关卡/);
+  }
+});
+
+test("CI lesson and workflow expose the learner-facing check, step and local command", () => {
+  const lesson = fs.readFileSync(path.join(root, "docs/lessons/09-ci-diagnostics.md"), "utf8");
+  const workflow = fs.readFileSync(path.join(root, ".github/workflows/practice-grade.yml"), "utf8");
+  const automation = fs.readFileSync(path.join(root, "scripts/practice/workflow.mjs"), "utf8");
+  const packageJson = fs.readFileSync(path.join(root, "package.json"), "utf8");
+  for (const phrase of ["Practice / Grade", "Check local Markdown links", "npm run check:ci-lab"]) {
+    assert.match(lesson, new RegExp(phrase.replaceAll("/", "\\/")));
+  }
+  assert.match(workflow, /name: Check local Markdown links/);
+  assert.match(workflow, /startsWith\(github\.event\.pull_request\.base\.ref, 'practice\/ex9\/'\)/);
+  assert.match(workflow, /name: Record successful CI head/);
+  assert.match(workflow, /contents: read[\s\S]*issues: write[\s\S]*pull-requests: read/);
+  assert.match(automation, /"exercise:9"/);
+  assert.match(automation, /manifest\.exercise < 9/);
+  assert.match(packageJson, /"check:ci-lab"/);
 });

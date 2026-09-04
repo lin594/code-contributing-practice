@@ -122,7 +122,8 @@ export class GitHubClient {
   }
 
   async getContent(path, ref, repository = this.repository) {
-    const payload = await this.get(this.repoPath(`/contents/${path}?ref=${encodeURIComponent(ref)}`, repository));
+    const encodedPath = String(path).split("/").map((segment) => encodeURIComponent(segment)).join("/");
+    const payload = await this.get(this.repoPath(`/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`, repository));
     if (Array.isArray(payload) || payload.type !== "file" || payload.encoding !== "base64") {
       throw new Error(`${path} at ${ref} is not a base64 file`);
     }

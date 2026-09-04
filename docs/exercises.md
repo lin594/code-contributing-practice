@@ -1,4 +1,4 @@
-# 八关练习与验收规则
+# 九关练习与验收规则
 
 本页是规则索引，不代替逐步教程。第一次做某关时，请从[学习地图](learning-path.md)进入对应 lesson。
 
@@ -118,6 +118,23 @@ Commit message 推荐 `type: summary`，例如 `docs: add sync notes`。第 1–
 - PR 中有本人对 Review 的说明性评论。
 
 教程：[第 8 课](lessons/08-capstone.md)
+
+## Exercise 9：从 CI 失败中定位问题
+
+**学习目标：** 从当前 commit 的失败检查进入 job/step 日志，在本地复现并留下可核对的通过证据。
+
+**通过条件：**
+
+- 机器人记录过本关预设链接错误对应的失败 head SHA；
+- 失败后在原 PR push 了新 commit，且当前链接检查通过；
+- workspace 保留本人用户名、修复贡献指南链接，并完整填写五项诊断记录；
+- `Practice / Grade · CI Lab` 对当前 head 显示成功；
+- 本人在失败后评论当前短 SHA、check、step 和 `npm run check:ci-lab`；
+- 不包含 merge commit。
+
+先让 CI 失败，再根据日志修复。提前修正链接不会完成“观察失败”条件。
+
+教程：[第 9 课](lessons/09-ci-diagnostics.md)
 
 ## 自动完成后发生什么
 

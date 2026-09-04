@@ -34,6 +34,22 @@ export function closingIssueNumbers(body = "") {
   return [...numbers];
 }
 
+export function hasCurrentCiVerification({ comments = [], actor, headSha, verifiedAfter }) {
+  const threshold = Date.parse(verifiedAfter ?? "");
+  if (!Number.isFinite(threshold) || !actor || !headSha) return false;
+  return comments.some((comment) => {
+    const createdAt = Date.parse(comment.createdAt);
+    if (comment.author?.toLowerCase() !== actor.toLowerCase() || !Number.isFinite(createdAt) || createdAt <= threshold) return false;
+    const body = comment.body ?? "";
+    const statedSha = body.match(/CI\s*已通过\s*[：:]\s*`?([0-9a-f]{7,40})(?![0-9a-f])/i)?.[1];
+    return Boolean(statedSha)
+      && headSha.toLowerCase().startsWith(statedSha.toLowerCase())
+      && /失败\s*check\s*[：:]\s*Practice\s*\/\s*Grade/i.test(body)
+      && /失败\s*step\s*[：:]\s*Check local Markdown links/i.test(body)
+      && /本地复现\s*[：:][^\n]*npm run check:ci-lab/i.test(body);
+  });
+}
+
 function labelsOf(value = []) {
   return value.map((label) => (typeof label === "string" ? label : label.name));
 }
@@ -276,6 +292,50 @@ function gradeExercise(input, results) {
       && !workspace.includes("TODO");
     if (!complete) results.push(fail("exercise8.workspace", "综合练习内容或上游协作约定不完整。", "同步最新 base，完成变更目的和自测结果，并保留维护者补充的协作约定。"));
     else results.push(pass("exercise8.workspace", REQUIRED, "综合练习内容和协作约定完整。"));
+  }
+
+  if (session.exercise === 9) {
+    const observedSha = feedbackState.ciFailureObservedSha;
+    if (!observedSha) {
+      results.push(pending("exercise9.failure-observed", "机器人还没有记录到本关预设的 CI 失败。", "先保留失效链接和诊断 TODO 创建 PR，再打开 Practice / Grade · CI Lab 的 Details。"));
+      return;
+    }
+    results.push(pass("exercise9.failure-observed", REQUIRED, `已记录失败 head ${observedSha.slice(0, 12)}。`));
+
+    if (input.pr.headSha === observedSha) {
+      results.push(pending("exercise9.revision", "PR 仍停留在出现 CI 失败时的 commit。", "从 Check local Markdown links 的日志找到首条可行动错误，在本地复现并修复后 commit、push。"));
+      return;
+    }
+    results.push(pass("exercise9.revision", REQUIRED, "CI 失败后已 push 新 commit。"));
+
+    if (!input.ciLab?.ok) {
+      results.push(fail("exercise9.ci", "当前 head 的本地链接检查仍未通过。", "打开 Practice / Grade · CI Lab 的 Details，查看 Check local Markdown links 中的文件、行号和首条错误。"));
+      return;
+    }
+    if (!input.ciCheckPassed) {
+      results.push(pending("exercise9.ci", "当前 head 的 CI Lab 尚未显示绿色通过。", "等待 Practice / Grade · CI Lab 完成；变绿后用当前短 SHA 留下验证评论。"));
+      return;
+    }
+    results.push(pass("exercise9.ci", REQUIRED, "当前 head 的本地链接检查已通过。"));
+
+    const learner = workspace.match(/^- 学习者：(.+)$/m)?.[1].trim() ?? "";
+    const correctLink = /^- 项目协作规则：\[贡献指南\]\(\.\.\/CONTRIBUTING\.md\)$/m.test(workspace);
+    const complete = learner.toLowerCase() === session.actor.toLowerCase()
+      && correctLink
+      && !workspace.includes("TODO")
+      && ["失败的 check", "失败的 step", "第一条可行动错误", "本地复现", "修复内容"].every((heading) => hasLearnerContent(workspace, heading));
+    if (!complete) {
+      results.push(fail("exercise9.diagnosis", "CI 诊断记录或修复结果尚未填写完整。", "根据日志修复链接，填写五项诊断记录，并保留当前 GitHub 用户名。"));
+      return;
+    }
+    results.push(pass("exercise9.diagnosis", REQUIRED, "链接已修复，CI 诊断记录填写完整。"));
+
+    if (!input.authorCiVerified) {
+      results.push(fail("exercise9.verification", "还没有用当前 head SHA 留下通过证据。", "确认绿色检查对应当前 commit，再按教程格式评论 check、step、本地复现命令和当前短 SHA。"));
+      return;
+    }
+    results.push(pass("exercise9.verification", REQUIRED, "作者已用当前 head SHA 记录绿色检查证据。"));
+    if (hasMergeCommit) results.push(fail("exercise9.no-merge", "本关不需要 merge commit。", "继续在原 topic branch 上直接 commit、push。"));
   }
 }
 

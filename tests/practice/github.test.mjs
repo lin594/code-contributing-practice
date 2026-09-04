@@ -47,3 +47,13 @@ test("pagination is bounded and stops on a short page", async () => {
   assert.equal(items.length, 101);
   assert.equal(calls, 2);
 });
+
+test("content paths and refs are encoded before entering the API URL", async () => {
+  const calls = [];
+  const client = new GitHubClient({ token: "x", repository: "owner/repo", fetchImpl: async (url) => {
+    calls.push(url);
+    return response(200, { type: "file", encoding: "base64", content: Buffer.from("ok").toString("base64") });
+  } });
+  assert.equal(await client.getContent("docs/name?ref=evil.md", "feature/a&b"), "ok");
+  assert.match(calls[0], /docs\/name%3Fref%3Devil\.md\?ref=feature%2Fa%26b$/);
+});

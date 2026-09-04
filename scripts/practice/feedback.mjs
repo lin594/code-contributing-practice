@@ -34,6 +34,12 @@ export function parseFeedbackState(body = "") {
   }
 }
 
+export function replaceFeedbackState(body, state = {}) {
+  const marker = /<!-- practice-feedback:v1:[A-Za-z0-9_-]+ -->/;
+  if (!marker.test(body)) throw new Error("feedback marker is missing");
+  return body.replace(marker, `<!-- ${FEEDBACK_MARKER}:${encodeFeedbackState(state)} -->`);
+}
+
 export function renderFeedback(report, state = {}) {
   const required = report.results.filter((item) => item.level === REQUIRED);
   const advisory = report.results.filter((item) => item.level === ADVISORY);

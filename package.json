@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "node --test tests/practice/*.test.mjs",
+    "check:ci-lab": "node scripts/practice/markdown-links.mjs .practice/workspace.md",
     "check:source": "node scripts/practice/check-source.mjs",
     "check": "npm run test && npm run check:source"
   }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { closingIssueNumbers, gradePractice, maintenanceReport } from "../../scripts/practice/grade.mjs";
+import { closingIssueNumbers, gradePractice, hasCurrentCiVerification, maintenanceReport } from "../../scripts/practice/grade.mjs";
 import { createManifest } from "../../scripts/practice/session.mjs";
 
 const COMPLETE_WORKSPACES = {
@@ -12,6 +12,7 @@ const COMPLETE_WORKSPACES = {
   6: "# 同步上游更新\n\n## 课程公告\n\n课程公告：上游已更新\n\n## 我的同步笔记\n\n个人笔记：fetch 只获取远端数据，merge 或 rebase 才会整合。\n",
   7: "# 解决上游冲突\n\n## 最终决定\n\n最终内容：上游更新 + 我的修改\n",
   8: "# 协作综合练习\n\n状态：已完成协作修订\n\n## 变更目的\n\n帮助同学检查贡献流程。\n\n## 协作约定\n\n协作约定：提交前先同步上游并回应 Review\n\n## 自测结果\n\n已检查 diff、提交历史和 PR 说明。\n\n## Review 回复\n\n已根据意见补充验证方法。\n",
+  9: "# 从 CI 失败中定位问题\n\n- 学习者：octocat\n- 项目协作规则：[贡献指南](../CONTRIBUTING.md)\n\n## 失败的 check\n\nPractice / Grade\n\n## 失败的 step\n\nCheck local Markdown links\n\n## 第一条可行动错误\n\nworkspace 第 4 行链接目标不存在。\n\n## 本地复现\n\nnpm run check:ci-lab 得到相同失败。\n\n## 修复内容\n\n把链接改为仓库根目录中的贡献指南。\n",
 };
 
 function inputFor(exercise, overrides = {}) {
@@ -19,7 +20,7 @@ function inputFor(exercise, overrides = {}) {
   const session = [6, 7, 8].includes(exercise)
     ? { ...baseSession, state: "upstream-injected", upstreamBaseSha: "base-sha" }
     : baseSession;
-  const counts = { 1: 1, 2: 2, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 3 };
+  const counts = { 1: 1, 2: 2, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 3, 9: 2 };
   const commits = Array.from({ length: counts[exercise] }, (_, index) => ({
     sha: `sha${index}`,
     message: `docs: complete part ${index + 1}`,
@@ -29,7 +30,9 @@ function inputFor(exercise, overrides = {}) {
     ? { draftObservedAt: "2026-08-20T00:01:00.000Z" }
     : [5, 8].includes(exercise)
       ? { revisionRequestedSha: "old-head", revisionRequestedAt: "2026-08-20T00:01:00.000Z" }
-      : {};
+      : exercise === 9
+        ? { ciFailureObservedSha: "1111111111111111111111111111111111111111", ciFailureObservedAt: "2026-08-20T00:01:00.000Z" }
+        : {};
   return {
     pr: {
       number: 99,
@@ -38,7 +41,7 @@ function inputFor(exercise, overrides = {}) {
       author: "octocat",
       baseRef: session.baseBranch,
       headRef: `exercise/${exercise}-42`,
-      headSha: "headsha",
+      headSha: "abcdef1234567890abcdef1234567890abcdef12",
       draft: false,
       labels: [],
     },
@@ -56,6 +59,9 @@ function inputFor(exercise, overrides = {}) {
     feedbackState,
     upstreamBaseIncluded: [6, 7, 8].includes(exercise),
     authorResponded: true,
+    authorCiVerified: exercise === 9,
+    ciLab: exercise === 9 ? { ok: true, problems: [] } : null,
+    ciCheckPassed: exercise === 9,
     humanChangesRequested: false,
     ...overrides,
   };
@@ -66,7 +72,7 @@ test("extracts supported closing keywords", () => {
   assert.deepEqual(closingIssueNumbers("disclose #12"), []);
 });
 
-for (let exercise = 1; exercise <= 8; exercise += 1) {
+for (let exercise = 1; exercise <= 9; exercise += 1) {
   test(`exercise ${exercise} passes its complete fixture`, () => {
     const report = gradePractice(inputFor(exercise));
     assert.equal(report.outcome, "pass", JSON.stringify(report.results, null, 2));
@@ -152,7 +158,7 @@ test("exercise 5 requires a new head in the same PR", () => {
   const first = inputFor(5, { feedbackState: {} });
   assert.equal(gradePractice(first).results.find((item) => item.id === "exercise5.review")?.status, "pending");
 
-  const unchanged = inputFor(5, { feedbackState: { revisionRequestedSha: "headsha" } });
+  const unchanged = inputFor(5, { feedbackState: { revisionRequestedSha: "abcdef1234567890abcdef1234567890abcdef12" } });
   assert.equal(gradePractice(unchanged).outcome, "fail");
 
   const noResponse = inputFor(5, { authorResponded: false });
@@ -176,12 +182,55 @@ test("exercise 7 requires injected ancestry and both conflict sides", () => {
 test("exercise 8 combines upstream sync, review revision, response and complete content", () => {
   for (const broken of [
     inputFor(8, { upstreamBaseIncluded: false }),
-    inputFor(8, { feedbackState: { revisionRequestedSha: "headsha" } }),
+    inputFor(8, { feedbackState: { revisionRequestedSha: "abcdef1234567890abcdef1234567890abcdef12" } }),
     inputFor(8, { authorResponded: false }),
     inputFor(8, { workspace: COMPLETE_WORKSPACES[8].replace("已完成协作修订", "初稿") }),
   ]) {
     assert.equal(gradePractice(broken).outcome, "fail");
   }
+});
+
+test("CI verification requires the author, current SHA, evidence fields and a comment after failure", () => {
+  const valid = {
+    actor: "octocat",
+    headSha: "abcdef1234567890abcdef1234567890abcdef12",
+    verifiedAfter: "2026-08-20T00:01:00.000Z",
+    comments: [{
+      author: "octocat",
+      createdAt: "2026-08-20T00:02:00.000Z",
+      body: "CI 已通过：abcdef1；失败 check：Practice / Grade；失败 step：Check local Markdown links；本地复现：npm run check:ci-lab",
+    }],
+  };
+  assert.equal(hasCurrentCiVerification(valid), true);
+  assert.equal(hasCurrentCiVerification({ ...valid, actor: "someone-else" }), false);
+  assert.equal(hasCurrentCiVerification({ ...valid, headSha: "9999999234567890abcdef1234567890abcdef12" }), false);
+  assert.equal(hasCurrentCiVerification({ ...valid, verifiedAfter: "2026-08-20T00:03:00.000Z" }), false);
+  assert.equal(hasCurrentCiVerification({ ...valid, comments: [{ ...valid.comments[0], createdAt: "not-a-date" }] }), false);
+  assert.equal(hasCurrentCiVerification({ ...valid, comments: [{ ...valid.comments[0], body: "CI 已通过：abcdef1" }] }), false);
+});
+
+test("exercise 9 requires an observed failure and a new head before grading the repair", () => {
+  const unobserved = inputFor(9, { feedbackState: {}, ciLab: { ok: false, problems: [{}] }, authorCiVerified: false });
+  assert.equal(gradePractice(unobserved).results.find((item) => item.id === "exercise9.failure-observed")?.status, "pending");
+
+  const unchanged = inputFor(9, {
+    feedbackState: { ciFailureObservedSha: "abcdef1234567890abcdef1234567890abcdef12", ciFailureObservedAt: "2026-08-20T00:01:00.000Z" },
+  });
+  assert.equal(gradePractice(unchanged).results.find((item) => item.id === "exercise9.revision")?.status, "pending");
+});
+
+test("exercise 9 blocks a failing check, incomplete diagnosis and stale verification", () => {
+  const failing = inputFor(9, { ciLab: { ok: false, problems: [{}] } });
+  assert.equal(gradePractice(failing).results.find((item) => item.id === "exercise9.ci")?.status, "fail");
+
+  const checkPending = inputFor(9, { ciCheckPassed: false });
+  assert.equal(gradePractice(checkPending).results.find((item) => item.id === "exercise9.ci")?.status, "pending");
+
+  const incomplete = inputFor(9, { workspace: COMPLETE_WORKSPACES[9].replace("npm run check:ci-lab 得到相同失败。", "TODO") });
+  assert.equal(gradePractice(incomplete).results.find((item) => item.id === "exercise9.diagnosis")?.status, "fail");
+
+  const staleComment = inputFor(9, { authorCiVerified: false });
+  assert.equal(gradePractice(staleComment).results.find((item) => item.id === "exercise9.verification")?.status, "fail");
 });
 
 test("ownership, base, Issue state and kill switch remain hard gates", () => {

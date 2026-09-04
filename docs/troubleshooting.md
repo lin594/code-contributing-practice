@@ -196,6 +196,29 @@ git merge --abort
 # 或 git rebase --abort
 ```
 
+## CI 红灯但不知道从哪里开始
+
+先确认失败属于 PR 当前 commit，而不是旧 run：
+
+```bash
+git rev-parse --short HEAD
+```
+
+在 PR 的 **Checks** 区域打开红色 check 的 **Details**，找到失败 job，再展开带红叉的 step。先记录最早出现的具体文件、行号、测试名和错误原因；最后的 `Process completed with exit code 1` 只表示命令失败，通常不是根因。
+
+根据状态选择动作：
+
+- `queued` / `in progress`：仍在等待或执行，不要修改代码催促；
+- `awaiting approval`：Fork 工作流等待维护者批准，联系维护者；
+- 测试、lint、构建错误：使用日志提供的命令在本地复现，一次只修一个明确错误；
+- 下载依赖失败、runner 中断或 GitHub 服务异常：保存 run 链接和时间，确认基础设施恢复后再重跑，不要为了平台故障重写代码。
+
+AI 可以协助解释日志，但要求它指出引用的是哪条错误、运行了什么验证命令以及退出结果。它只说“应该修好了”不算检查通过。
+
+## 第 9 关链接修好后仍未通过
+
+先等待 `Practice / Grade · CI Lab` 对最新 commit 变绿，再运行 `git rev-parse --short HEAD`。按照第 9 课格式在练习 PR 的 Conversation 评论当前短 SHA、失败 check、失败 step 和 `npm run check:ci-lab`。旧 SHA、Issue 评论或 CI 还未完成时留下的判断都不能完成练习；修正原评论也会触发复查。
+
 ## 自动检查一直没有重新运行
 
 能触发复查的动作包括：向同一 PR head push、新建/编辑本人的 PR 评论、编辑 PR 标题或正文、Draft 转 Ready。先确认动作发生在正确 PR。GitHub Actions 服务异常时可查看仓库 **Actions** 页面，不要重复创建 Issue。
